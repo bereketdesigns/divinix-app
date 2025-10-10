@@ -1,0 +1,7 @@
+---
+// This page runs on the server.
+// It deletes the authentication cookie.
+Astro.cookies.delete('auth_token', { path: '/' });
+// It then redirects the user to the homepage.
+return Astro.redirect('/');
+---

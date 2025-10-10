@@ -1,35 +1,18 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-// This page is a "shell". The client-side script handles all logic,
-// including fetching data and protecting the route.
+// No more Supabase imports on the frontend for this page!
 ---
 <MainLayout title="Edit Your Profile">
   <div class="edit-container">
-    <!-- Loading state shown by default -->
-    <div id="loading-state">
-      <p>Verifying session and loading your profile...</p>
-    </div>
-
-    <!-- The main form, hidden by default -->
+    <div id="loading-state"><p>Loading your profile...</p></div>
     <div id="profile-form-container" style="display: none;">
       <h1>Edit Your Profile</h1>
       <form id="profile-form">
-        <label>Full Name
-          <input type="text" name="full_name" required />
-        </label>
-        <label>Bio (A short sentence about you)
-          <textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea>
-        </label>
-        <label>Specialty (e.g., UI/UX, Brand Identity)
-          <input type="text" name="specialty" placeholder="e.g., Motion Graphics" />
-        </label>
-        <label>Portfolio URL
-          <input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" />
-        </label>
-        <label>Contact Username (Your Telegram username)
-          <input type="text" name="username" readonly />
-        </label>
-        
+        <label>Full Name<input type="text" name="full_name" required /></label>
+        <label>Bio<textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea></label>
+        <label>Specialty<input type="text" name="specialty" placeholder="e.g., Motion Graphics" /></label>
+        <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
+        <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
         <div class="form-actions">
           <button type="button" id="logout-btn" class="btn-secondary">Log Out</button>
           <button type="submit" id="save-btn" class="btn-primary">Save Changes</button>
@@ -41,101 +24,80 @@ import MainLayout from '../layouts/MainLayout.astro';
 </MainLayout>
 
 <script>
-  import { supabase } from '../lib/supabase';
-
   // --- Type-Safe Element Selectors ---
-  const loadingState = document.getElementById('loading-state') as HTMLDivElement | null;
-  const formContainer = document.getElementById('profile-form-container') as HTMLDivElement | null;
-  const form = document.getElementById('profile-form') as HTMLFormElement | null;
-  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement | null;
-  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement | null;
-  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+  const loadingState = document.getElementById('loading-state') as HTMLDivElement;
+  const formContainer = document.getElementById('profile-form-container') as HTMLDivElement;
+  const form = document.getElementById('profile-form') as HTMLFormElement;
+  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement;
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement;
 
   async function loadProfile() {
-    if (!loadingState || !formContainer || !form) return;
+    try {
+      // 1. Fetch data from our own secure API endpoint
+      const response = await fetch('/api/profile/get');
+      if (!response.ok) {
+        // If the API returns unauthorized, our cookie is bad, so we log out.
+        if (response.status === 401) {
+          window.location.href = '/logout'; // Redirect to a logout page
+          return;
+        }
+        throw new Error('Failed to fetch profile.');
+      }
+      const profile = await response.json();
 
-    // 1. Check if the user is logged in
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      console.error('No session found. Redirecting to login.');
-      // If no session, protect this page by redirecting
-      window.location.href = '/login';
-      return;
-    }
-
-    // 2. If logged in, fetch their profile data from the `profiles` table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileError) {
-      alert('Could not fetch your profile data. Please try again.');
-      // Log out the user if their profile is missing, which can happen in rare cases
-      await supabase.auth.signOut();
-      window.location.href = '/login';
-      return;
-    }
-
-    // 3. Populate the form fields with the fetched data
-    if (profile) {
+      // 2. Populate the form
       (form.elements.namedItem('full_name') as HTMLInputElement).value = profile.full_name || '';
       (form.elements.namedItem('bio') as HTMLTextAreaElement).value = profile.bio || '';
       (form.elements.namedItem('specialty') as HTMLInputElement).value = profile.specialty || '';
       (form.elements.namedItem('portfolio_url') as HTMLInputElement).value = profile.portfolio_url || '';
       (form.elements.namedItem('username') as HTMLInputElement).value = profile.username || 'Not available';
-    }
 
-    // 4. Hide the loading message and show the form
-    loadingState.style.display = 'none';
-    formContainer.style.display = 'block';
+      // 3. Show the form
+      loadingState.style.display = 'none';
+      formContainer.style.display = 'block';
+    } catch (error) {
+      loadingState.textContent = 'Error loading profile. Please try logging in again.';
+    }
   }
 
-  // Load the profile as soon as the page is ready
   document.addEventListener('DOMContentLoaded', loadProfile);
 
-  // Handle form submission to update the profile
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!saveBtn || !formStatus) return;
-
     saveBtn.disabled = true;
     formStatus.textContent = 'Saving...';
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return; // Should not happen if they are on this page
-
     const formData = new FormData(form);
     const updates = {
-      id: user.id, // The user's ID
-      updated_at: new Date(),
       full_name: formData.get('full_name'),
       bio: formData.get('bio'),
       specialty: formData.get('specialty'),
       portfolio_url: formData.get('portfolio_url'),
     };
 
-    const { error } = await supabase.from('profiles').upsert(updates);
-    
-    if (error) {
-      formStatus.textContent = `Error: ${error.message}`;
-      formStatus.style.color = 'red';
-    } else {
+    try {
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) throw new Error('Failed to save profile.');
+      
       formStatus.textContent = 'Profile saved successfully!';
       formStatus.style.color = 'green';
-      // Clear the message after a few seconds
       setTimeout(() => { formStatus.textContent = '' }, 3000);
+    } catch (error) {
+      formStatus.textContent = `Error: ${error.message}`;
+      formStatus.style.color = 'red';
+    } finally {
+      saveBtn.disabled = false;
     }
-    saveBtn.disabled = false;
   });
 
-  // Handle logout
-  logoutBtn?.addEventListener('click', async () => {
-    logoutBtn.disabled = true;
-    await supabase.auth.signOut();
-    window.location.href = '/';
+  logoutBtn?.addEventListener('click', () => {
+    window.location.href = '/logout';
   });
 </script>
 

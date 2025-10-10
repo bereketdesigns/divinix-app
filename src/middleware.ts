@@ -1,30 +1,19 @@
 import { defineMiddleware } from 'astro:middleware';
-import jsonwebtoken from 'jsonwebtoken';
-
-const JWT_SECRET = import.meta.env.JWT_SECRET;
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const protectedPaths = ['/edit'];
   const { pathname } = context.url;
 
+  // The middleware's only job: check if an auth cookie exists on protected routes.
   if (protectedPaths.some(path => pathname.startsWith(path))) {
     const token = context.cookies.get('auth_token')?.value;
 
-    if (!token || !JWT_SECRET) {
-      // If no token, redirect to login
-      return context.redirect('/login');
-    }
-
-    try {
-      const decoded = jsonwebtoken.verify(token, JWT_SECRET);
-      // Attach user info to the request for other pages/endpoints to use
-      context.locals.user = decoded as { userId: number };
-    } catch (err) {
-      // Invalid token, clear cookie and redirect to login
-      context.cookies.delete('auth_token', { path: '/' });
+    if (!token) {
+      // If no token, redirect to login. This is the only redirection logic.
       return context.redirect('/login');
     }
   }
 
+  // If the cookie exists, let the request proceed to the page.
   return next();
 });
