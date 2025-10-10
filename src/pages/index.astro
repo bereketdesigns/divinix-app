@@ -1,77 +1,58 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
+import { supabase } from '../lib/supabase';
 
-// --- Static Sample Data ---
-// In Section 3, we will replace this with a live database call.
-const sampleDesigners = [
-  {
-    id: 1,
-    name: 'Alia Vera',
-    specialty: 'UI/UX & Product Design',
-    bio: 'Crafting intuitive and beautiful digital experiences. Passionate about user-centric design.',
-    profilePicture: 'https://i.pravatar.cc/150?u=aliavera', // pravatar.cc provides placeholder avatars
-    telegramUsername: 'telegram', // Placeholder link
-  },
-  {
-    id: 2,
-    name: 'Ben Carter',
-    specialty: 'Brand Identity & Logo Design',
-    bio: 'Building memorable brands through strategic design and compelling visuals.',
-    profilePicture: 'https://i.pravatar.cc/150?u=bencarter',
-    telegramUsername: 'telegram',
-  },
-  {
-    id: 3,
-    name: 'Chloe Davis',
-    specialty: '3D & Motion Graphics',
-    bio: 'Bringing ideas to life with dynamic motion and stunning 3D animations.',
-    profilePicture: 'https://i.pravatar.cc/150?u=chloedavis',
-    telegramUsername: 'telegram',
-  },
-  {
-    id: 4,
-    name: 'David Evans',
-    specialty: 'Illustration & Art Direction',
-    bio: 'Creating unique visual narratives through illustration. Available for commissions.',
-    profilePicture: 'https://i.pravatar.cc/150?u=davidevans',
-    telegramUsername: 'telegram',
-  },
-];
+// This is a type alias for clarity and type safety.
+interface DesignerProfile {
+  id: number;
+  full_name: string | null;
+  specialty: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  username: string | null;
+}
+
+let designers: DesignerProfile[] = [];
+// Fetch live data from the 'profiles' table in Supabase.
+const { data, error } = await supabase
+  .from('profiles')
+  .select('id, full_name, specialty, bio, avatar_url, username')
+  .not('full_name', 'is', null) // Only show profiles that have been completed.
+  .order('created_at', { ascending: false });
+
+if (error) {
+  console.error("Error fetching designer profiles:", error.message);
+} else if (data) {
+  designers = data;
+}
 ---
 <MainLayout title="Divinix - Find Your Designer">
   <div class="hero">
     <h1>Find Your Creative Partner</h1>
     <p>Discover and connect with talented designers from around the world.</p>
   </div>
-
-  <!-- Search Bar -->
   <div class="search-container">
     <input type="search" id="search-bar" placeholder="Search by name or specialty..." />
   </div>
-
-  <!-- Designer Grid -->
   <div class="designer-grid" id="designer-grid">
-    {sampleDesigners.map(designer => (
-      <div class="designer-card" data-name={designer.name.toLowerCase()} data-specialty={designer.specialty.toLowerCase()}>
+    {designers.map(designer => (
+      <div class="designer-card" data-name={(designer.full_name || '').toLowerCase()} data-specialty={(designer.specialty || '').toLowerCase()}>
         <div class="card-header">
-          <img src={designer.profilePicture} alt={designer.name} class="profile-pic" />
+          <img src={designer.avatar_url || 'https://i.pravatar.cc/150'} alt={designer.full_name || 'Designer'} class="profile-pic" />
           <div class="card-header-text">
-            <h3 class="designer-name">{designer.name}</h3>
-            <p class="designer-specialty">{designer.specialty}</p>
+            <h3 class="designer-name">{designer.full_name}</h3>
+            <p class="designer-specialty">{designer.specialty || 'Creative Professional'}</p>
           </div>
         </div>
-        <p class="designer-bio">{designer.bio}</p>
-        <a href={`https://t.me/${designer.telegramUsername}`} class="contact-btn" target="_blank">Contact Me</a>
+        <p class="designer-bio">{designer.bio || 'No bio provided.'}</p>
+        <a href={`https://t.me/${designer.username}`} class="contact-btn" target="_blank" rel="noopener noreferrer">Contact Me</a>
       </div>
     ))}
   </div>
 </MainLayout>
-
-<!-- Client-side script for the search bar -->
 <script>
   const searchBar = document.getElementById('search-bar') as HTMLInputElement;
   const designerCards = document.querySelectorAll('.designer-card') as NodeListOf<HTMLElement>;
-
   function filterDesigners() {
     const searchTerm = searchBar.value.toLowerCase().trim();
     designerCards.forEach(card => {
@@ -81,67 +62,31 @@ const sampleDesigners = [
       card.style.display = isMatch ? 'flex' : 'none';
     });
   }
-
   searchBar.addEventListener('input', filterDesigners);
 </script>
-
 <style>
   .hero { text-align: center; margin-bottom: 2rem; }
   .hero h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
   .hero p { font-size: 1.1rem; color: var(--hint-color); }
   .search-container { margin-bottom: 2.5rem; }
-  #search-bar {
-    width: 100%;
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 16px;
-    border: 1px solid var(--border-color);
-    background-color: var(--secondary-bg-color);
-    color: var(--text-color);
-  }
-
-  .designer-grid {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: 1fr;
-  }
-  @media (min-width: 640px) {
-    .designer-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (min-width: 1024px) {
-    .designer-grid { grid-template-columns: repeat(3, 1fr); }
-  }
-
+  #search-bar { width: 100%; padding: 1rem 1.5rem; font-size: 1rem; border-radius: 16px; border: 1px solid var(--border-color); background-color: var(--secondary-bg-color); color: var(--text-color); }
+  .designer-grid { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .designer-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .designer-grid { grid-template-columns: repeat(3, 1fr); } }
   .designer-card {
-    background-color: var(--secondary-bg-color);
-    border-radius: 24px;
-    padding: 1.5rem;
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
+    background-color: var(--secondary-bg-color); border-radius: 24px; padding: 1.5rem;
+    border: 1px solid var(--border-color); display: flex; flex-direction: column;
     transition: transform 0.2s, box-shadow 0.2s;
   }
-  .designer-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.07);
-  }
-  .dark .designer-card:hover {
-    box-shadow: 0 0 25px color-mix(in srgb, var(--link-color) 15%, transparent);
-  }
-
+  .designer-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.07); }
+  .dark .designer-card:hover { box-shadow: 0 0 25px color-mix(in srgb, var(--link-color) 15%, transparent); }
   .card-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-  .profile-pic { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+  .profile-pic { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background-color: var(--border-color); }
   .designer-name { font-size: 1.2rem; margin: 0; }
   .designer-specialty { font-size: 0.9rem; color: var(--hint-color); margin: 0; }
   .designer-bio { font-size: 1rem; line-height: 1.5; color: var(--text-color); opacity: 0.9; flex-grow: 1; }
   .contact-btn {
-    display: block;
-    text-align: center;
-    background-color: var(--button-color);
-    color: var(--button-text-color);
-    padding: 0.75rem;
-    border-radius: 12px;
-    font-weight: 600;
-    margin-top: 1.5rem;
+    display: block; text-align: center; background-color: var(--button-color); color: var(--button-text-color);
+    padding: 0.75rem; border-radius: 12px; font-weight: 600; margin-top: 1.5rem;
   }
 </style>

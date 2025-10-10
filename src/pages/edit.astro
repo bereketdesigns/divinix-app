@@ -1,59 +1,78 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-// No more Supabase imports on the frontend for this page!
+import '../styles/admin.css'; // We reuse the clean admin styles
 ---
 <MainLayout title="Edit Your Profile">
-  <div class="edit-container">
+  <div class="edit-container admin-panel">
     <div id="loading-state"><p>Loading your profile...</p></div>
     <div id="profile-form-container" style="display: none;">
-      <h1>Edit Your Profile</h1>
-      <form id="profile-form">
-        <label>Full Name<input type="text" name="full_name" required /></label>
-        <label>Bio<textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea></label>
-        <label>Specialty<input type="text" name="specialty" placeholder="e.g., Motion Graphics" /></label>
-        <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
-        <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
-        <div class="form-actions">
-          <button type="button" id="logout-btn" class="btn-secondary">Log Out</button>
-          <button type="submit" id="save-btn" class="btn-primary">Save Changes</button>
-        </div>
-        <div id="form-status" class="status-message"></div>
-      </form>
+      <header class="admin-header">
+        <h1>Edit Your Profile</h1>
+      </header>
+      <section class="admin-section">
+        <form id="profile-form" class="product-form">
+          <label>
+            Profile Picture
+            <input type="file" id="avatar-upload" accept="image/*" />
+          </label>
+          <div class="image-preview-wrapper">
+            <span>Current:</span>
+            <img src="" alt="Current profile picture" class="image-preview" id="image-preview" style="border-radius: 50%;" />
+          </div>
+          <input type="hidden" id="avatar-url-input" />
+
+          <label>Full Name<input type="text" name="full_name" required /></label>
+          <label>Bio<textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea></label>
+          <label>Specialty<input type="text" name="specialty" placeholder="e.g., Motion Graphics" /></label>
+          <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
+          <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
+          
+          <div class="form-actions">
+            <div id="form-status" class="status-message upload-status"></div>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+            <button type="submit" id="save-btn" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </section>
     </div>
   </div>
 </MainLayout>
-
 <script>
-  // --- Type-Safe Element Selectors ---
   const loadingState = document.getElementById('loading-state') as HTMLDivElement;
   const formContainer = document.getElementById('profile-form-container') as HTMLDivElement;
   const form = document.getElementById('profile-form') as HTMLFormElement;
-  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement;
   const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
   const formStatus = document.getElementById('form-status') as HTMLDivElement;
+  const avatarUpload = document.getElementById('avatar-upload') as HTMLInputElement;
+  const avatarUrlInput = document.getElementById('avatar-url-input') as HTMLInputElement;
+  const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+
+  async function uploadFile(file: File): Promise<string> {
+    const response = await fetch('/api/profile/upload', {
+      method: 'POST', body: file, headers: { 'Content-Type': file.type }
+    });
+    if (!response.ok) { throw new Error('Image upload failed.'); }
+    return (await response.json()).url;
+  }
 
   async function loadProfile() {
     try {
-      // 1. Fetch data from our own secure API endpoint
       const response = await fetch('/api/profile/get');
-      if (!response.ok) {
-        // If the API returns unauthorized, our cookie is bad, so we log out.
-        if (response.status === 401) {
-          window.location.href = '/logout'; // Redirect to a logout page
-          return;
-        }
-        throw new Error('Failed to fetch profile.');
+      if (response.status === 401 || !response.ok) {
+        window.location.href = '/login'; return;
       }
       const profile = await response.json();
 
-      // 2. Populate the form
       (form.elements.namedItem('full_name') as HTMLInputElement).value = profile.full_name || '';
       (form.elements.namedItem('bio') as HTMLTextAreaElement).value = profile.bio || '';
       (form.elements.namedItem('specialty') as HTMLInputElement).value = profile.specialty || '';
       (form.elements.namedItem('portfolio_url') as HTMLInputElement).value = profile.portfolio_url || '';
       (form.elements.namedItem('username') as HTMLInputElement).value = profile.username || 'Not available';
+      
+      const currentAvatarUrl = profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`;
+      avatarUrlInput.value = currentAvatarUrl;
+      imagePreview.src = currentAvatarUrl;
 
-      // 3. Show the form
       loadingState.style.display = 'none';
       formContainer.style.display = 'block';
     } catch (error) {
@@ -68,15 +87,25 @@ import MainLayout from '../layouts/MainLayout.astro';
     saveBtn.disabled = true;
     formStatus.textContent = 'Saving...';
 
-    const formData = new FormData(form);
-    const updates = {
-      full_name: formData.get('full_name'),
-      bio: formData.get('bio'),
-      specialty: formData.get('specialty'),
-      portfolio_url: formData.get('portfolio_url'),
-    };
+    const newAvatarFile = avatarUpload.files?.[0];
 
     try {
+      let finalAvatarUrl = avatarUrlInput.value;
+      if (newAvatarFile) {
+        formStatus.textContent = 'Uploading new picture...';
+        finalAvatarUrl = await uploadFile(newAvatarFile);
+      }
+      
+      formStatus.textContent = 'Saving profile data...';
+      const formData = new FormData(form);
+      const updates = {
+        full_name: formData.get('full_name'),
+        bio: formData.get('bio'),
+        specialty: formData.get('specialty'),
+        portfolio_url: formData.get('portfolio_url'),
+        avatar_url: finalAvatarUrl,
+      };
+
       const response = await fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,36 +115,12 @@ import MainLayout from '../layouts/MainLayout.astro';
       if (!response.ok) throw new Error('Failed to save profile.');
       
       formStatus.textContent = 'Profile saved successfully!';
-      formStatus.style.color = 'green';
       setTimeout(() => { formStatus.textContent = '' }, 3000);
     } catch (error) {
-      formStatus.textContent = `Error: ${error.message}`;
-      formStatus.style.color = 'red';
+      const err = error as Error;
+      formStatus.textContent = `Error: ${err.message}`;
     } finally {
       saveBtn.disabled = false;
     }
   });
-
-  logoutBtn?.addEventListener('click', () => {
-    window.location.href = '/logout';
-  });
 </script>
-
-<style>
-  .edit-container { max-width: 600px; margin: 2rem auto; }
-  #profile-form { display: flex; flex-direction: column; gap: 1.5rem; }
-  #profile-form label { font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; }
-  #profile-form input, #profile-form textarea {
-    width: 100%; padding: 0.75rem; font-size: 1rem; border-radius: 12px;
-    border: 1px solid var(--border-color); background-color: var(--secondary-bg-color); color: var(--text-color);
-  }
-  input[name="username"] { background-color: var(--bg-color); cursor: not-allowed; opacity: 0.7; }
-  .form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem; }
-  .btn-primary, .btn-secondary {
-    padding: 0.75rem 1.5rem; border: none; border-radius: 12px;
-    font-size: 1rem; font-weight: 600; cursor: pointer;
-  }
-  .btn-primary { background-color: var(--button-color); color: var(--button-text-color); }
-  .btn-secondary { background-color: var(--border-color); color: var(--text-color); }
-  .status-message { margin-top: 1rem; min-height: 1.2em; text-align: right; }
-</style>

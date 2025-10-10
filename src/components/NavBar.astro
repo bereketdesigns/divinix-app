@@ -1,13 +1,35 @@
 ---
-// In the future, we will add a theme toggle and a conditional admin link here.
+// This component is now purely presentational.
+// All logic is handled by the client-side script.
 ---
 <header>
   <nav class="container">
     <a href="/" class="brand">Divinix</a>
-    <a href="/login" class="create-profile-btn">Create Your Profile</a>
+    
+    <!-- Both buttons are rendered, but one is hidden via the script -->
+    <a href="/login" id="create-profile-btn" class="nav-button">Create Your Profile</a>
+    <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
   </nav>
 </header>
+<script>
+  // This script runs on every page load to determine the user's login state
+  // and show the correct navigation button.
+  document.addEventListener('DOMContentLoaded', () => {
+    const createBtn = document.getElementById('create-profile-btn') as HTMLAnchorElement | null;
+    const editBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
+    
+    // The presence of our 'auth_token' cookie is the source of truth for login state.
+    const isLoggedIn = document.cookie.includes('auth_token=');
 
+    if (isLoggedIn && createBtn && editBtn) {
+      createBtn.style.display = 'none';
+      editBtn.style.display = 'inline-block';
+    } else if (createBtn && editBtn) {
+      createBtn.style.display = 'inline-block';
+      editBtn.style.display = 'none';
+    }
+  });
+</script>
 <style>
   header {
     position: sticky;
@@ -32,16 +54,5 @@
     font-weight: 800;
     color: var(--text-color);
   }
-  .create-profile-btn {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.6rem 1.2rem;
-    border-radius: 999px; /* Pill shape */
-    background-color: var(--button-color);
-    color: var(--button-text-color);
-    transition: transform 0.2s;
-  }
-  .create-profile-btn:hover {
-    transform: scale(1.05);
-  }
-</style>
+  .nav-button {
+    font-siz
