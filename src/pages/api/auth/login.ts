@@ -1,75 +1,100 @@
 import type { APIRoute } from 'astro';
-import { validate, parse } from '@tma.js/init-data-node';
 import { createClient } from '@supabase/supabase-js';
 import { sign } from 'jsonwebtoken';
+import { createHmac } from 'node:crypto';
 
-// Type-safe fetching of environment variables
+// --- Environment Variables ---
 const botToken = import.meta.env.BOT_TOKEN;
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_KEY;
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 
-export const POST: APIRoute = async ({ request }) => {
-  // --- Pre-flight Checks ---
-  if (!botToken) {
-    console.error('BOT_TOKEN is not configured.');
-    return new Response(JSON.stringify({ error: 'Server configuration error.' }), { status: 500 });
-  }
-  if (!supabaseServiceKey || !supabaseUrl) {
-    console.error('Supabase keys are not configured.');
-    return new Response(JSON.stringify({ error: 'Server configuration error.' }), { status: 500 });
+/**
+ * A self-contained function to validate Telegram initData.
+ * It uses Node.js crypto and has zero external dependencies.
+ * @param initData - The initData string from Telegram.
+ * @param botToken - Your bot's secret token.
+ * @throws {Error} if validation fails.
+ */
+function validateTelegramAuth(initData: string, botToken: string): URLSearchParams {
+  const urlParams = new URLSearchParams(initData);
+  const hash = urlParams.get('hash');
+  urlParams.delete('hash');
+
+  // !!! THIS IS THE FIX: Explicitly type the array as string[] !!!
+  const dataCheckArr: string[] = [];
+  urlParams.sort();
+  urlParams.forEach((value, key) => dataCheckArr.push(`${key}=${value}`));
+  
+  const dataCheckString = dataCheckArr.join('\n');
+  
+  const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const calculatedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+  if (calculatedHash !== hash) {
+    throw new Error('Telegram initData validation failed: Invalid hash.');
   }
 
+  const authDate = urlParams.get('auth_date');
+  if (!authDate) {
+    throw new Error('Telegram initData validation failed: auth_date is missing.');
+  }
+
+  const authTimestamp = parseInt(authDate, 10);
+  const now = Date.now() / 1000;
+  
+  if (now - authTimestamp > 3600) { // 1 hour expiration
+    throw new Error('Telegram initData validation failed: Data is expired.');
+  }
+
+  return urlParams;
+}
+
+
+// --- API Route ---
+export const POST: APIRoute = async ({ request }) => {
   try {
     const { initData } = await request.json();
-    if (!initData) {
-      return new Response(JSON.stringify({ error: 'initData is required.' }), { status: 400 });
+    if (!initData || !botToken || !supabaseServiceKey || !supabaseUrl) {
+      throw new Error("Missing required data or environment variables.");
     }
 
-    // --- 1. Validate the initData ---
-    validate(initData, botToken, { expiresIn: 3600 }); // Expires in 1 hour
-
-    // --- 2. Parse User Data ---
-    const data = parse(initData);
-    const user = data.user;
-    if (!user) {
-      throw new Error('Invalid user data in initData.');
-    }
-
-    // --- 3. Create a Supabase Admin Client ---
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const validatedParams = validateTelegramAuth(initData, botToken);
     
-    // --- 4. Ensure a Profile Exists (Upsert) ---
-    // This will create a new profile if one doesn't exist, or do nothing if it does.
+    const userJson = validatedParams.get('user');
+    if (!userJson) { throw new Error('User data is missing from initData.'); }
+    const user = JSON.parse(userJson);
+    
+    if (!user || !user.id) { throw new Error('Invalid user data in initData'); }
+    
+    const payload = {
+      sub: user.id.toString(),
+      aud: 'authenticated',
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // 7 days
+      user_metadata: {
+        telegram_id: user.id,
+        username: user.username,
+        full_name: `${user.first_name} ${user.last_name || ''}`.trim(),
+        avatar_url: user.photo_url || null,
+      },
+    };
+    const customToken = sign(payload, supabaseServiceKey);
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { error: upsertError } = await supabaseAdmin
         .from('profiles')
         .upsert({
-            id: user.id, // Use Telegram ID as the primary key
+            id: user.id,
             username: user.username,
-            full_name: `${user.firstName} ${user.lastName || ''}`.trim(),
-            avatar_url: user.photoUrl || null,
-        }, { onConflict: 'id' }); // onConflict tells Supabase what to do if a row with this ID already exists.
+            full_name: `${user.first_name} ${user.last_name || ''}`.trim(),
+            avatar_url: user.photo_url || null,
+        });
+    if (upsertError) { throw upsertError; }
 
-    if (upsertError) {
-      throw upsertError;
-    }
-
-    // --- 5. Create a Custom JWT for Supabase Auth ---
-    const payload = {
-      sub: user.id.toString(), // The user's unique ID, which our RLS policy uses
-      aud: 'authenticated',
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // Expires in 7 days
-    };
-    
-    // sign() requires a non-null secret, which we checked at the top.
-    const customToken = sign(payload, supabaseServiceKey);
-
-    // --- 6. Return the custom JWT to the client ---
     return new Response(JSON.stringify({ token: customToken }), { status: 200 });
 
-  } catch (error) {
-    const err = error as Error;
-    console.error('Login API Error:', err.message);
-    // Be careful not to leak sensitive error details to the client
-    return new Response(JSON.stringify({ error: 'Authentication failed.' }), { status: 500 });
+  } catch (err) {
+    const error = err as Error;
+    console.error('[Login API Error]:', error.message);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 };
