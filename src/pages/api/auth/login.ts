@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import * as jwt from 'jsonwebtoken'; // Correct namespace import
+import jsonwebtoken from 'jsonwebtoken'; // This now works because of tsconfig change
 import { createHmac } from 'node:crypto';
 
-// --- Environment Variables ---
+// --- Environment Variables (unchanged) ---
 const botToken = import.meta.env.BOT_TOKEN;
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_KEY;
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 
-// --- Self-contained validation function (unchanged) ---
+// --- Self-contained validation function (unchanged and correct) ---
 function validateTelegramAuth(initData: string, botToken: string): URLSearchParams {
   const urlParams = new URLSearchParams(initData);
   const hash = urlParams.get('hash');
@@ -27,8 +27,7 @@ function validateTelegramAuth(initData: string, botToken: string): URLSearchPara
   return urlParams;
 }
 
-
-// --- API Route ---
+// --- API Route (unchanged logic) ---
 export const POST: APIRoute = async ({ request }) => {
   try {
     const { initData } = await request.json();
@@ -37,41 +36,35 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const validatedParams = validateTelegramAuth(initData, botToken);
-    
     const userJson = validatedParams.get('user');
     if (!userJson) { throw new Error('User data is missing from initData.'); }
     const user = JSON.parse(userJson);
-    
     if (!user || !user.id) { throw new Error('Invalid user data in initData'); }
-    
+
     const payload = {
       sub: user.id.toString(),
       aud: 'authenticated',
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // 7 days
+      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7),
       user_metadata: {
         telegram_id: user.id,
         username: user.username,
         full_name: `${user.first_name} ${user.last_name || ''}`.trim(),
-        avatar__url: user.photo_url || null,
+        avatar_url: user.photo_url || null,
       },
     };
 
-    // Use the imported object to access the 'sign' function
-    const customToken = jwt.sign(payload, supabaseServiceKey);
+    const customToken = jsonwebtoken.sign(payload, supabaseServiceKey);
     
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    const { error: upsertError } = await supabaseAdmin
-        .from('profiles')
-        .upsert({
-            id: user.id,
-            username: user.username,
-            full_name: `${user.first_name} ${user.last_name || ''}`.trim(),
-            avatar_url: user.photo_url || null,
-        });
+    const { error: upsertError } = await supabaseAdmin.from('profiles').upsert({
+        id: user.id,
+        username: user.username,
+        full_name: `${user.first_name} ${user.last_name || ''}`.trim(),
+        avatar_url: user.photo_url || null,
+    });
     if (upsertError) { throw upsertError; }
 
     return new Response(JSON.stringify({ token: customToken }), { status: 200 });
-
   } catch (err) {
     const error = err as Error;
     console.error('[Login API Error]:', error.message);

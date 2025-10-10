@@ -1,5 +1,12 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    // !!! THIS IS THE DEFINITIVE FIX !!!
+    // It enables compatibility between modern ES Modules and older CommonJS modules.
+    "esModuleInterop": true
+  }
 }
