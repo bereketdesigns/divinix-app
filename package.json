@@ -9,6 +9,10 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.14.3"
+    "@supabase/supabase-js": "^2.75.0",
+    "@tma.js/init-data-node": "^2.0.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "astro": "^5.14.3",
+    "jsonwebtoken": "^9.0.2"
   }
 }

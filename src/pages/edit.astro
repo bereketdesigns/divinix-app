@@ -1,0 +1,159 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+// This page is a "shell". The client-side script handles all logic,
+// including fetching data and protecting the route.
+---
+<MainLayout title="Edit Your Profile">
+  <div class="edit-container">
+    <!-- Loading state shown by default -->
+    <div id="loading-state">
+      <p>Verifying session and loading your profile...</p>
+    </div>
+
+    <!-- The main form, hidden by default -->
+    <div id="profile-form-container" style="display: none;">
+      <h1>Edit Your Profile</h1>
+      <form id="profile-form">
+        <label>Full Name
+          <input type="text" name="full_name" required />
+        </label>
+        <label>Bio (A short sentence about you)
+          <textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea>
+        </label>
+        <label>Specialty (e.g., UI/UX, Brand Identity)
+          <input type="text" name="specialty" placeholder="e.g., Motion Graphics" />
+        </label>
+        <label>Portfolio URL
+          <input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" />
+        </label>
+        <label>Contact Username (Your Telegram username)
+          <input type="text" name="username" readonly />
+        </label>
+        
+        <div class="form-actions">
+          <button type="button" id="logout-btn" class="btn-secondary">Log Out</button>
+          <button type="submit" id="save-btn" class="btn-primary">Save Changes</button>
+        </div>
+        <div id="form-status" class="status-message"></div>
+      </form>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  import { supabase } from '../lib/supabase';
+
+  // --- Type-Safe Element Selectors ---
+  const loadingState = document.getElementById('loading-state') as HTMLDivElement | null;
+  const formContainer = document.getElementById('profile-form-container') as HTMLDivElement | null;
+  const form = document.getElementById('profile-form') as HTMLFormElement | null;
+  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement | null;
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement | null;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+
+  async function loadProfile() {
+    if (!loadingState || !formContainer || !form) return;
+
+    // 1. Check if the user is logged in
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('No session found. Redirecting to login.');
+      // If no session, protect this page by redirecting
+      window.location.href = '/login';
+      return;
+    }
+
+    // 2. If logged in, fetch their profile data from the `profiles` table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError) {
+      alert('Could not fetch your profile data. Please try again.');
+      // Log out the user if their profile is missing, which can happen in rare cases
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+      return;
+    }
+
+    // 3. Populate the form fields with the fetched data
+    if (profile) {
+      (form.elements.namedItem('full_name') as HTMLInputElement).value = profile.full_name || '';
+      (form.elements.namedItem('bio') as HTMLTextAreaElement).value = profile.bio || '';
+      (form.elements.namedItem('specialty') as HTMLInputElement).value = profile.specialty || '';
+      (form.elements.namedItem('portfolio_url') as HTMLInputElement).value = profile.portfolio_url || '';
+      (form.elements.namedItem('username') as HTMLInputElement).value = profile.username || 'Not available';
+    }
+
+    // 4. Hide the loading message and show the form
+    loadingState.style.display = 'none';
+    formContainer.style.display = 'block';
+  }
+
+  // Load the profile as soon as the page is ready
+  document.addEventListener('DOMContentLoaded', loadProfile);
+
+  // Handle form submission to update the profile
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!saveBtn || !formStatus) return;
+
+    saveBtn.disabled = true;
+    formStatus.textContent = 'Saving...';
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return; // Should not happen if they are on this page
+
+    const formData = new FormData(form);
+    const updates = {
+      id: user.id, // The user's ID
+      updated_at: new Date(),
+      full_name: formData.get('full_name'),
+      bio: formData.get('bio'),
+      specialty: formData.get('specialty'),
+      portfolio_url: formData.get('portfolio_url'),
+    };
+
+    const { error } = await supabase.from('profiles').upsert(updates);
+    
+    if (error) {
+      formStatus.textContent = `Error: ${error.message}`;
+      formStatus.style.color = 'red';
+    } else {
+      formStatus.textContent = 'Profile saved successfully!';
+      formStatus.style.color = 'green';
+      // Clear the message after a few seconds
+      setTimeout(() => { formStatus.textContent = '' }, 3000);
+    }
+    saveBtn.disabled = false;
+  });
+
+  // Handle logout
+  logoutBtn?.addEventListener('click', async () => {
+    logoutBtn.disabled = true;
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  });
+</script>
+
+<style>
+  .edit-container { max-width: 600px; margin: 2rem auto; }
+  #profile-form { display: flex; flex-direction: column; gap: 1.5rem; }
+  #profile-form label { font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; }
+  #profile-form input, #profile-form textarea {
+    width: 100%; padding: 0.75rem; font-size: 1rem; border-radius: 12px;
+    border: 1px solid var(--border-color); background-color: var(--secondary-bg-color); color: var(--text-color);
+  }
+  input[name="username"] { background-color: var(--bg-color); cursor: not-allowed; opacity: 0.7; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem; }
+  .btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-primary { background-color: var(--button-color); color: var(--button-text-color); }
+  .btn-secondary { background-color: var(--border-color); color: var(--text-color); }
+  .status-message { margin-top: 1rem; min-height: 1.2em; text-align: right; }
+</style>
