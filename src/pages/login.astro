@@ -12,121 +12,50 @@ import MainLayout from '../layouts/MainLayout.astro';
     <div id="status-message" class="status-message"></div>
   </div>
 </MainLayout>
-
 <script>
-  import { supabase } from '../lib/supabase';
-
   const loginBtn = document.getElementById('login-btn') as HTMLButtonElement | null;
   const statusMessage = document.getElementById('status-message') as HTMLDivElement | null;
 
-  loginBtn?.addEventListener('click', () => {
+  loginBtn?.addEventListener('click', async () => {
     if (!statusMessage || !loginBtn) return;
 
     try {
-      // 1. Check if the app is running inside Telegram
       const tg = window.Telegram.WebApp;
       if (!tg.initData) {
         throw new Error("This app must be run inside Telegram to log in.");
       }
 
-      statusMessage.textContent = "Authenticating with Telegram...";
+      statusMessage.textContent = "Authenticating...";
       loginBtn.disabled = true;
 
-      // 2. Send the initData to our secure backend API
-      fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: tg.initData }),
-      })
-      .then(res => {
-        if (!res.ok) {
-          return res.json().then(err => { throw new Error(err.error || 'Authentication failed on server.') });
-        }
-        return res.json();
-      })
-      .then(data => {
-        const { token } = data;
-        if (!token) {
-          throw new Error('No session token received from server.');
-        }
-        
-        statusMessage.textContent = "Setting up your session...";
-
-        // 3. Use the custom token from our server to sign in to Supabase
-        return supabase.auth.signInWithIdToken({
-          provider: 'telegram', // The provider name can be anything
-          token: token,
-        });
-      })
-      .then(({ data, error }) => {
-        if (error) {
-          throw error;
-        }
-        if (data.session) {
-          statusMessage.textContent = "Success! Redirecting to your profile...";
-          // 4. On successful login, redirect the user to the edit page
-          window.location.href = '/edit';
-        } else {
-          throw new Error('Supabase session could not be established.');
-        }
-      })
-      .catch((err: Error) => {
-        console.error('Login process failed:', err);
-        statusMessage.textContent = `Error: ${err.message}`;
-        statusMessage.style.color = 'red';
-        if (loginBtn) loginBtn.disabled = false;
       });
 
-    } catch (e) {
-      statusMessage.textContent = "Error: Telegram script not found. Please open this app within Telegram.";
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Login failed on the server.');
+      }
+      
+      statusMessage.textContent = "Success! Redirecting...";
+      window.location.href = '/edit';
+
+    } catch (err) {
+      const error = err as Error;
+      console.error('Login process failed:', error);
+      statusMessage.textContent = `Error: ${error.message}`;
       statusMessage.style.color = 'red';
+      if (loginBtn) loginBtn.disabled = false;
     }
   });
 </script>
-
 <style>
-  .login-container {
-    max-width: 400px;
-    margin: 4rem auto;
-    text-align: center;
-    padding: 2rem;
-    background-color: var(--secondary-bg-color);
-    border-radius: 24px;
-    border: 1px solid var(--border-color);
-  }
-  .login-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border: none;
-    border-radius: 16px;
-    background-color: var(--button-color);
-    color: var(--button-text-color);
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  .login-btn .icon {
-    width: 24px;
-    height: 24px;
-  }
-  .login-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent);
-  }
-  .login-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-  .status-message {
-    margin-top: 1.5rem;
-    min-height: 1.2em;
-    color: var(--hint-color);
-    font-size: 0.9rem;
-  }
+  .login-container { max-width: 400px; margin: 4rem auto; text-align: center; padding: 2rem; background-color: var(--secondary-bg-color); border-radius: 24px; border: 1px solid var(--border-color); }
+  .login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600; border: none; border-radius: 16px; background-color: var(--button-color); color: var(--button-text-color); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .login-btn .icon { width: 24px; height: 24px; }
+  .login-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent); }
+  .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+  .status-message { margin-top: 1.5rem; min-height: 1.2em; color: var(--hint-color); font-size: 0.9rem; }
 </style>

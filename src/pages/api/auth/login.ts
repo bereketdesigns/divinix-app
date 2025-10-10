@@ -1,14 +1,13 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import jsonwebtoken from 'jsonwebtoken'; // This now works because of tsconfig change
+import jsonwebtoken from 'jsonwebtoken';
 import { createHmac } from 'node:crypto';
 
-// --- Environment Variables (unchanged) ---
 const botToken = import.meta.env.BOT_TOKEN;
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_KEY;
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const JWT_SECRET = import.meta.env.JWT_SECRET; // Ensure this is in your .env and Vercel
 
-// --- Self-contained validation function (unchanged and correct) ---
 function validateTelegramAuth(initData: string, botToken: string): URLSearchParams {
   const urlParams = new URLSearchParams(initData);
   const hash = urlParams.get('hash');
@@ -24,37 +23,23 @@ function validateTelegramAuth(initData: string, botToken: string): URLSearchPara
   const authDate = urlParams.get('auth_date');
   if (!authDate) { throw new Error('auth_date is missing.'); }
   if (Date.now() / 1000 - parseInt(authDate, 10) > 3600) { throw new Error('Data is expired.'); }
-  return urlParams;
+  return urlParams; // This was the missing return path
 }
 
-// --- API Route (unchanged logic) ---
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const { initData } = await request.json();
-    if (!initData || !botToken || !supabaseServiceKey || !supabaseUrl) {
-      throw new Error("Missing required data or environment variables.");
+    if (!botToken || !supabaseServiceKey || !supabaseUrl || !JWT_SECRET) {
+      throw new Error("A required server environment variable is missing.");
     }
+    const { initData } = await request.json();
+    if (!initData) { throw new Error("initData is required."); }
 
     const validatedParams = validateTelegramAuth(initData, botToken);
     const userJson = validatedParams.get('user');
     if (!userJson) { throw new Error('User data is missing from initData.'); }
     const user = JSON.parse(userJson);
-    if (!user || !user.id) { throw new Error('Invalid user data in initData'); }
+    if (!user || !user.id) { throw new Error('Invalid user data in initData.'); }
 
-    const payload = {
-      sub: user.id.toString(),
-      aud: 'authenticated',
-      exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7),
-      user_metadata: {
-        telegram_id: user.id,
-        username: user.username,
-        full_name: `${user.first_name} ${user.last_name || ''}`.trim(),
-        avatar_url: user.photo_url || null,
-      },
-    };
-
-    const customToken = jsonwebtoken.sign(payload, supabaseServiceKey);
-    
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { error: upsertError } = await supabaseAdmin.from('profiles').upsert({
         id: user.id,
@@ -64,7 +49,17 @@ export const POST: APIRoute = async ({ request }) => {
     });
     if (upsertError) { throw upsertError; }
 
-    return new Response(JSON.stringify({ token: customToken }), { status: 200 });
+    const sessionToken = jsonwebtoken.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    
+    cookies.set('auth_token', sessionToken, {
+      path: '/',
+      httpOnly: true,
+      secure: import.meta.env.PROD,
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: 'lax',
+    });
+
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (err) {
     const error = err as Error;
     console.error('[Login API Error]:', error.message);
