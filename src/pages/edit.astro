@@ -1,23 +1,23 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import '@/styles/admin.css'; // Use the robust alias path
+// No more ../styles/admin.css import. It's all self-contained below.
 ---
 <MainLayout title="Edit Your Profile">
-  <div class="edit-container admin-panel">
+  <div class="edit-container">
     <div id="loading-state"><p>Loading your profile...</p></div>
     <div id="profile-form-container" style="display: none;">
-      <header class="admin-header">
+      <header class="form-header">
         <h1>Edit Your Profile</h1>
       </header>
-      <section class="admin-section">
-        <form id="profile-form" class="product-form">
+      <section class="form-section">
+        <form id="profile-form">
           <label>
             Profile Picture
             <input type="file" id="avatar-upload" accept="image/*" />
           </label>
           <div class="image-preview-wrapper">
             <span>Current:</span>
-            <img src="" alt="Current profile picture" class="image-preview" id="image-preview" style="border-radius: 50%;" />
+            <img src="" alt="Current profile picture" class="image-preview" id="image-preview" />
           </div>
           <input type="hidden" id="avatar-url-input" />
           <label>Full Name<input type="text" name="full_name" required /></label>
@@ -26,7 +26,7 @@ import '@/styles/admin.css'; // Use the robust alias path
           <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
           <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
           <div class="form-actions">
-            <div id="form-status" class="status-message upload-status"></div>
+            <div id="form-status" class="status-message"></div>
             <a href="/" class="btn btn-secondary">Cancel</a>
             <button type="submit" id="save-btn" class="btn btn-primary">Save Changes</button>
           </div>
@@ -35,16 +35,17 @@ import '@/styles/admin.css'; // Use the robust alias path
     </div>
   </div>
 </MainLayout>
+
 <script>
-  // The JavaScript is unchanged from my last "full code" response and is correct.
-  const loadingState = document.getElementById('loading-state');
-  const formContainer = document.getElementById('profile-form-container');
-  const form = document.getElementById('profile-form');
-  const saveBtn = document.getElementById('save-btn');
-  const formStatus = document.getElementById('form-status');
-  const avatarUpload = document.getElementById('avatar-upload');
-  const avatarUrlInput = document.getElementById('avatar-url-input');
-  const imagePreview = document.getElementById('image-preview');
+  // The JavaScript is unchanged and correct.
+  const loadingState = document.getElementById('loading-state') as HTMLDivElement;
+  const formContainer = document.getElementById('profile-form-container') as HTMLDivElement;
+  const form = document.getElementById('profile-form') as HTMLFormElement;
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement;
+  const avatarUpload = document.getElementById('avatar-upload') as HTMLInputElement;
+  const avatarUrlInput = document.getElementById('avatar-url-input') as HTMLInputElement;
+  const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
 
   async function uploadFile(file: File): Promise<string> {
     const response = await fetch('/api/profile/upload', {
@@ -78,13 +79,13 @@ import '@/styles/admin.css'; // Use the robust alias path
 
   document.addEventListener('DOMContentLoaded', loadProfile);
 
-  form.addEventListener('submit', async (e) => {
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     saveBtn.disabled = true;
     formStatus.textContent = 'Saving...';
-    const newAvatarFile = (avatarUpload as HTMLInputElement).files?.[0];
+    const newAvatarFile = (avatarUpload).files?.[0];
     try {
-      let finalAvatarUrl = (avatarUrlInput as HTMLInputElement).value;
+      let finalAvatarUrl = (avatarUrlInput).value;
       if (newAvatarFile) {
         formStatus.textContent = 'Uploading new picture...';
         finalAvatarUrl = await uploadFile(newAvatarFile);
@@ -107,9 +108,42 @@ import '@/styles/admin.css'; // Use the robust alias path
       formStatus.textContent = 'Profile saved successfully!';
       setTimeout(() => { formStatus.textContent = '' }, 3000);
     } catch (error) {
-      formStatus.textContent = `Error: ${error.message}`;
+      const err = error as Error;
+      formStatus.textContent = `Error: ${err.message}`;
     } finally {
       saveBtn.disabled = false;
     }
   });
 </script>
+
+<style>
+  .edit-container { max-width: 800px; margin: 2rem auto; }
+  .form-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+  }
+  .form-header h1 { margin: 0; }
+  .form-section {
+    background-color: var(--secondary-bg-color);
+    padding: 2rem;
+    border-radius: 24px;
+  }
+  #profile-form { display: flex; flex-direction: column; gap: 1.5rem; }
+  #profile-form label { font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; }
+  #profile-form input, #profile-form textarea {
+    width: 100%; padding: 0.75rem; font-size: 1rem; border-radius: 12px;
+    border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color);
+  }
+  input[name="username"] { background-color: var(--bg-color); cursor: not-allowed; opacity: 0.7; }
+  .image-preview-wrapper { display: flex; align-items: center; gap: 1rem; }
+  .image-preview { height: 60px; width: 60px; border-radius: 50%; object-fit: cover; background-color: var(--border-color); }
+  .form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 1rem; }
+  .btn, .btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none;
+  }
+  .btn-primary { background-color: var(--button-color); color: var(--button-text-color); }
+  .btn-secondary { background-color: var(--border-color); color: var(--text-color); }
+  .status-message { min-height: 1.2em; text-align: left; flex-grow: 1; color: var(--hint-color); }
+</style>
