@@ -1,0 +1,47 @@
+---
+// In the future, we will add a theme toggle and a conditional admin link here.
+---
+<header>
+  <nav class="container">
+    <a href="/" class="brand">Divinix</a>
+    <a href="/login" class="create-profile-btn">Create Your Profile</a>
+  </nav>
+</header>
+
+<style>
+  header {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    background-color: var(--header-bg-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+    border-bottom: 1px solid var(--border-color);
+  }
+  nav {
+    padding-top: 0;
+    padding-bottom: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-color);
+  }
+  .create-profile-btn {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px; /* Pill shape */
+    background-color: var(--button-color);
+    color: var(--button-text-color);
+    transition: transform 0.2s;
+  }
+  .create-profile-btn:hover {
+    transform: scale(1.05);
+  }
+</style>

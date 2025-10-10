@@ -1,0 +1,58 @@
+---
+import NavBar from '../components/NavBar.astro';
+import '../styles/global.css';
+
+interface Props {
+	title: string;
+}
+const { title } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content="Divinix - A link-in-bio app for designers" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+		<title>{title}</title>
+    
+    <!-- Icons (we'll use a placeholder for now) -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Telegram Mini App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+	</head>
+	<body>
+    <NavBar />
+		<main class="container">
+      <slot /> 
+    </main>
+
+    <!-- Theme & Telegram Integration Script -->
+    <script is:inline>
+      try {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        
+        const applyTheme = () => {
+          document.documentElement.className = tg.colorScheme;
+          localStorage.setItem('theme', tg.colorScheme);
+        };
+        tg.onEvent('themeChanged', applyTheme);
+        
+        // Check for saved theme first, then apply Telegram's theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+          document.documentElement.classList.add(savedTheme);
+        } else {
+          applyTheme();
+        }
+
+        tg.BackButton.hide(); // Hide back button on the root page
+      } catch (e) {
+        console.warn('Telegram script not found. Applying saved or default theme.');
+        const savedTheme = localStorage.getItem('theme');
+        document.documentElement.className = savedTheme || 'light';
+      }
+    </script>
+	</body>
+</html>
