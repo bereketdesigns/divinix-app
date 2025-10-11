@@ -2,7 +2,6 @@
 import MainLayout from '../layouts/MainLayout.astro';
 import { supabase } from '../lib/supabase';
 
-// This is a type alias for clarity and type safety.
 interface DesignerProfile {
   id: number;
   full_name: string | null;
@@ -13,11 +12,10 @@ interface DesignerProfile {
 }
 
 let designers: DesignerProfile[] = [];
-// Fetch live data from the 'profiles' table in Supabase.
 const { data, error } = await supabase
   .from('profiles')
   .select('id, full_name, specialty, bio, avatar_url, username')
-  .not('full_name', 'is', null) // Only show profiles that have been completed.
+  .not('full_name', 'is', null)
   .order('created_at', { ascending: false });
 
 if (error) {
@@ -25,6 +23,11 @@ if (error) {
 } else if (data) {
   designers = data;
 }
+
+// Add headers to prevent caching of this server-rendered page
+Astro.response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+Astro.response.headers.set('Pragma', 'no-cache');
+Astro.response.headers.set('Expires', '0');
 ---
 <MainLayout title="Divinix - Find Your Designer">
   <div class="hero">

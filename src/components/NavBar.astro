@@ -7,7 +7,7 @@
     <a href="/" class="brand">Divinix</a>
     
     <!-- Both buttons are rendered, but one is hidden via the script -->
-    <a href="/login" id="create-profile-btn" class="nav-button">Create Your Profile</a>
+    <a href="/login" id="create-profile-btn" class="nav-button" style="display: none;">Create Your Profile</a>
     <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
   </nav>
 </header>
@@ -18,13 +18,15 @@
     const createBtn = document.getElementById('create-profile-btn') as HTMLAnchorElement | null;
     const editBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
     
+    if (!createBtn || !editBtn) return;
+
     // The presence of our 'auth_token' cookie is the source of truth for login state.
     const isLoggedIn = document.cookie.includes('auth_token=');
 
-    if (isLoggedIn && createBtn && editBtn) {
+    if (isLoggedIn) {
       createBtn.style.display = 'none';
       editBtn.style.display = 'inline-block';
-    } else if (createBtn && editBtn) {
+    } else {
       createBtn.style.display = 'inline-block';
       editBtn.style.display = 'none';
     }
@@ -32,27 +34,22 @@
 </script>
 <style>
   header {
-    position: sticky;
-    top: 0;
-    width: 100%;
-    background-color: var(--header-bg-color);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
-    border-bottom: 1px solid var(--border-color);
+    position: sticky; top: 0; width: 100%;
+    background-color: var(--header-bg-color); backdrop-filter: blur(12px);
+    z-index: 100; border-bottom: 1px solid var(--border-color);
   }
   nav {
-    padding-top: 0;
-    padding-bottom: 0;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    height: 60px; display: flex; align-items: center; justify-content: space-between;
   }
-  .brand {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--text-color);
-  }
+  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); }
   .nav-button {
-    font-siz
+    font-size: 0.9rem; font-weight: 600; padding: 0.6rem 1.2rem;
+    border-radius: 999px; background-color: var(--button-color);
+    color: var(--button-text-color); transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+  }
+  .nav-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent);
+  }
+</style>

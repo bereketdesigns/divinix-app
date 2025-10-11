@@ -26,7 +26,18 @@ export const GET: APIRoute = async ({ cookies }) => {
 
     if (error) throw error;
 
-    return new Response(JSON.stringify(profile), { status: 200 });
+    // Create a response with headers that prevent caching.
+    const response = new Response(JSON.stringify(profile), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
+
+    return response;
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Invalid token or server error' }), { status: 401 });
   }
