@@ -1,44 +1,33 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import '../styles/admin.css';
+// No more CSS imports here.
 ---
 <MainLayout title="Edit Your Profile">
-  <div class="edit-container admin-panel">
+  <div class="edit-container">
     <div id="loading-state"><p>Loading your profile...</p></div>
     <div id="profile-form-container" style="display: none;">
-      <header class="admin-header">
-        <h1>Edit Your Profile</h1>
-      </header>
-      
-      <!-- The Form Section -->
-      <section id="form-section" class="admin-section">
-        <form id="profile-form" class="product-form">
-          <label>
-            Profile Picture
-            <input type="file" id="avatar-upload" accept="image/*" />
-          </label>
+      <header class="form-header"><h1>Edit Your Profile</h1></header>
+      <section class="form-section">
+        <form id="profile-form">
+          <label>Profile Picture<input type="file" id="avatar-upload" accept="image/*" /></label>
           <div class="image-preview-wrapper">
             <span>Current:</span>
-            <img src="" alt="Current profile picture" class="image-preview" id="image-preview" style="border-radius: 50%;" />
+            <img src="" alt="Current profile picture" class="image-preview" id="image-preview" />
           </div>
           <input type="hidden" id="avatar-url-input" />
-
           <label>Full Name<input type="text" name="full_name" required /></label>
           <label>Bio<textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea></label>
           <label>Specialty<input type="text" name="specialty" placeholder="e.g., Motion Graphics" /></label>
           <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
           <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
-          
           <div class="form-actions">
-            <div id="form-status" class="status-message upload-status"></div>
+            <div id="form-status" class="status-message"></div>
             <a href="/" class="btn btn-secondary">Cancel</a>
             <button type="submit" id="save-btn" class="btn btn-primary">Save Changes</button>
           </div>
         </form>
       </section>
-
-      <!-- The Success Message Section (hidden by default) -->
-      <section id="success-section" class="admin-section" style="display: none; text-align: center;">
+      <section id="success-section" class="form-section" style="display: none; text-align: center;">
         <h2>Profile Saved!</h2>
         <p>Your profile is now live on the homepage.</p>
         <a href="/" class="btn btn-primary" style="margin-top: 1rem;">View Your Live Profile</a>
@@ -117,7 +106,7 @@ import '../styles/admin.css';
       });
       if (!response.ok) throw new Error('Failed to save profile.');
       
-      // On success, hide the form and show the success message
+      // On success, hide the form and hh the success message
       formSection.style.display = 'none';
       successSection.style.display = 'block';
 
@@ -128,3 +117,26 @@ import '../styles/admin.css';
     }
   });
 </script>
+<style>
+  .edit-container { max-width: 800px; margin: 2rem auto; }
+  .form-header { border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 2rem; }
+  .form-header h1 { margin: 0; }
+  .form-section { background-color: var(--secondary-bg-color); padding: 2rem; border-radius: 24px; }
+  #profile-form { display: flex; flex-direction: column; gap: 1.5rem; }
+  #profile-form label { font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; }
+  #profile-form input, #profile-form textarea {
+    width: 100%; padding: 0.75rem; font-size: 1rem; border-radius: 12px;
+    border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color);
+  }
+  input[name="username"] { background-color: var(--bg-color); cursor: not-allowed; opacity: 0.7; }
+  .image-preview-wrapper { display: flex; align-items: center; gap: 1rem; }
+  .image-preview { height: 60px; width: 60px; border-radius: 50%; object-fit: cover; background-color: var(--border-color); }
+  .form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 1rem; }
+  .btn, .btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none;
+  }
+  .btn-primary { background-color: var(--button-color); color: var(--button-text-color); }
+  .btn-secondary { background-color: var(--border-color); color: var(--text-color); }
+  .status-message { min-height: 1.2em; text-align: left; flex-grow: 1; color: var(--hint-color); }
+</style>
