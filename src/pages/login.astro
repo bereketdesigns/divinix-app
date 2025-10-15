@@ -20,6 +20,7 @@ import MainLayout from '../layouts/MainLayout.astro';
 </MainLayout>
 <script>
   import { redirectIfLoggedIn } from '../lib/auth-client';
+  
   const loginBtn = document.getElementById('login-btn') as HTMLButtonElement | null;
   const statusMessage = document.getElementById('status-message') as HTMLDivElement | null;
   const loginForm = document.getElementById('login-form') as HTMLDivElement | null;
@@ -35,27 +36,31 @@ import MainLayout from '../layouts/MainLayout.astro';
 
   loginBtn?.addEventListener('click', async () => {
     if (!statusMessage || !loginBtn) return;
-    try {
+    if ('Telegram' in window && window.Telegram.WebApp.initData) {
       const tg = window.Telegram.WebApp;
-      if (!tg.initData) { throw new Error("This app must be run inside Telegram."); }
       statusMessage.textContent = "Authenticating...";
       loginBtn.disabled = true;
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: tg.initData }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Login failed on the server.');
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData }),
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Login failed on the server.');
+        }
+        statusMessage.textContent = "Success! Redirecting...";
+        window.location.href = '/edit';
+      } catch (err) {
+        const error = err as Error;
+        statusMessage.textContent = `Error: ${error.message}`;
+        statusMessage.style.color = 'red';
+        if (loginBtn) loginBtn.disabled = false;
       }
-      statusMessage.textContent = "Success! Redirecting...";
-      window.location.href = '/edit';
-    } catch (err) {
-      const error = err as Error;
-      statusMessage.textContent = `Error: ${error.message}`;
+    } else {
+      statusMessage.textContent = "Error: This app must be run inside Telegram to log in.";
       statusMessage.style.color = 'red';
-      if (loginBtn) loginBtn.disabled = false;
     }
   });
 </script>
