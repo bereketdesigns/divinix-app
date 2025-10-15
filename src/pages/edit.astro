@@ -1,25 +1,33 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-// No more CSS imports here.
 ---
 <MainLayout title="Edit Your Profile">
   <div class="edit-container">
     <div id="loading-state"><p>Loading your profile...</p></div>
+
     <div id="profile-form-container" style="display: none;">
-      <header class="form-header"><h1>Edit Your Profile</h1></header>
-      <section class="form-section">
+      <header class="form-header">
+        <h1>Edit Your Profile</h1>
+      </header>
+
+      <section id="form-section" class="form-section">
         <form id="profile-form">
-          <label>Profile Picture<input type="file" id="avatar-upload" accept="image/*" /></label>
+          <label>
+            Profile Picture
+            <input type="file" id="avatar-upload" accept="image/*" />
+          </label>
           <div class="image-preview-wrapper">
             <span>Current:</span>
             <img src="" alt="Current profile picture" class="image-preview" id="image-preview" />
           </div>
           <input type="hidden" id="avatar-url-input" />
+
           <label>Full Name<input type="text" name="full_name" required /></label>
           <label>Bio<textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea></label>
           <label>Specialty<input type="text" name="specialty" placeholder="e.g., Motion Graphics" /></label>
           <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
           <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
+          
           <div class="form-actions">
             <div id="form-status" class="status-message"></div>
             <a href="/" class="btn btn-secondary">Cancel</a>
@@ -27,6 +35,7 @@ import MainLayout from '../layouts/MainLayout.astro';
           </div>
         </form>
       </section>
+
       <section id="success-section" class="form-section" style="display: none; text-align: center;">
         <h2>Profile Saved!</h2>
         <p>Your profile is now live on the homepage.</p>
@@ -83,9 +92,9 @@ import MainLayout from '../layouts/MainLayout.astro';
     e.preventDefault();
     saveBtn.disabled = true;
     formStatus.textContent = 'Saving...';
-    const newAvatarFile = avatarUpload.files?.[0];
+    const newAvatarFile = (avatarUpload).files?.[0];
     try {
-      let finalAvatarUrl = avatarUrlInput.value;
+      let finalAvatarUrl = (avatarUrlInput).value;
       if (newAvatarFile) {
         formStatus.textContent = 'Uploading new picture...';
         finalAvatarUrl = await uploadFile(newAvatarFile);
@@ -106,10 +115,8 @@ import MainLayout from '../layouts/MainLayout.astro';
       });
       if (!response.ok) throw new Error('Failed to save profile.');
       
-      // On success, hide the form and hh the success message
       formSection.style.display = 'none';
       successSection.style.display = 'block';
-
     } catch (error) {
       const err = error as Error;
       formStatus.textContent = `Error: ${err.message}`;
