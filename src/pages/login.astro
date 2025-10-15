@@ -19,7 +19,7 @@ import MainLayout from '../layouts/MainLayout.astro';
   </div>
 </MainLayout>
 <script>
-  import { redirectIfLoggedIn } from '../lib/auth-client';
+  import { redirectIfLoggedIn } from '@/lib/auth-client'; // USE THE ROBUST ALIAS
   
   const loginBtn = document.getElementById('login-btn') as HTMLButtonElement | null;
   const statusMessage = document.getElementById('status-message') as HTMLDivElement | null;
