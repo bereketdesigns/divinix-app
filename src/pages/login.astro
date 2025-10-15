@@ -1,40 +1,69 @@
 ---
-// This component is now purely presentational.
-// All logic is handled by the client-side script.
+import MainLayout from '../layouts/MainLayout.astro';
 ---
-<header>
-  <nav class="container">
-    <a href="/" class="brand">Divinix</a>
-    
-    <!-- Both buttons are rendered, but one is hidden via the script -->
-    <a href="/login" id="create-profile-btn" class="nav-button" style="display: none;">Create Your Profile</a>
-    <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
-  </nav>
-</header>
+<MainLayout title="Login - Divinix">
+  <div class="login-container">
+    <div id="redirecting-message" style="display: none;">
+      <h1>Already Logged In</h1>
+      <p>Redirecting you to your profile...</p>
+    </div>
+    <div id="login-form">
+      <h1>Create Your Profile</h1>
+      <p>Log in securely with your Telegram account to get started.</p>
+      <button id="login-btn" class="login-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.7.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+        Login with Telegram
+      </button>
+      <div id="status-message" class="status-message"></div>
+    </div>
+  </div>
+</MainLayout>
 <script>
-  import { updateNav } from '../lib/auth-client';
+  import { redirectIfLoggedIn } from '../lib/auth-client';
+  const loginBtn = document.getElementById('login-btn') as HTMLButtonElement | null;
+  const statusMessage = document.getElementById('status-message') as HTMLDivElement | null;
+  const loginForm = document.getElementById('login-form') as HTMLDivElement | null;
+  const redirectingMessage = document.getElementById('redirecting-message') as HTMLDivElement | null;
   
-  // Run the navigation update logic as soon as the DOM is ready.
-  document.addEventListener('DOMContentLoaded', updateNav);
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.cookie.includes('auth_token=')) {
+      if (loginForm) loginForm.style.display = 'none';
+      if (redirectingMessage) redirectingMessage.style.display = 'block';
+      redirectIfLoggedIn();
+    }
+  });
+
+  loginBtn?.addEventListener('click', async () => {
+    if (!statusMessage || !loginBtn) return;
+    try {
+      const tg = window.Telegram.WebApp;
+      if (!tg.initData) { throw new Error("This app must be run inside Telegram."); }
+      statusMessage.textContent = "Authenticating...";
+      loginBtn.disabled = true;
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Login failed on the server.');
+      }
+      statusMessage.textContent = "Success! Redirecting...";
+      window.location.href = '/edit';
+    } catch (err) {
+      const error = err as Error;
+      statusMessage.textContent = `Error: ${error.message}`;
+      statusMessage.style.color = 'red';
+      if (loginBtn) loginBtn.disabled = false;
+    }
+  });
 </script>
 <style>
-  header {
-    position: sticky; top: 0; width: 100%;
-    background-color: var(--header-bg-color); backdrop-filter: blur(12px);
-    z-index: 100; border-bottom: 1px solid var(--border-color);
-  }
-  nav {
-    height: 60px; display: flex; align-items: center; justify-content: space-between;
-  }
-  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); }
-  .nav-button {
-    font-size: 0.9rem; font-weight: 600; padding: 0.6rem 1.2rem;
-    border-radius: 999px; background-color: var(--button-color);
-    color: var(--button-text-color); transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none;
-  }
-  .nav-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent);
-  }
+  .login-container { max-width: 400px; margin: 4rem auto; text-align: center; padding: 2rem; background-color: var(--secondary-bg-color); border-radius: 24px; border: 1px solid var(--border-color); }
+  .login-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600; border: none; border-radius: 16px; background-color: var(--button-color); color: var(--button-text-color); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+  .login-btn .icon { width: 24px; height: 24px; }
+  .login-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent); }
+  .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+  .status-message { margin-top: 1.5rem; min-height: 1.2em; color: var(--hint-color); font-size: 0.9rem; }
 </style>
