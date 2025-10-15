@@ -1,10 +1,8 @@
 ---
-import NavBar from '../components/NavBar.astro';
+// We REMOVE the NavBar import. Pages will now add it if they need it.
 import '../styles/global.css';
 
-interface Props {
-	title: string;
-}
+interface Props { title: string; }
 const { title } = Astro.props;
 ---
 <!doctype html>
@@ -14,15 +12,11 @@ const { title } = Astro.props;
 		<meta name="description" content="Divinix - A link-in-bio app for designers" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 		<title>{title}</title>
-    
-    <!-- Icons (we'll use a placeholder for now) -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-    <!-- Telegram Mini App Script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 	</head>
 	<body>
-    <NavBar />
+    <!-- The NavBar is GONE from here -->
 		<main class="container">
       <slot /> 
     </main>

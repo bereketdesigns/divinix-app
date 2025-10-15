@@ -1,23 +1,12 @@
 ---
-// This component is now purely presentational.
+// A simple, static navbar for public-facing pages.
 ---
 <header>
   <nav class="container">
-    <a href="/" class="brand">Divinix</a>
-    
-    <!-- Both buttons are rendered but hidden by default, script will show the correct one -->
-    <a href="/login" id="create-profile-btn" class="nav-button" style="display: none;">Create Your Profile</a>
-    <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
+    <a href="/discover" class="brand">Divinix</a>
+    <a href="/login" class="nav-button">Create Your Profile</a>
   </nav>
 </header>
-<script>
-  import { initializeAuthUI } from '../lib/auth-client';
-  
-  // Run on the initial page load
-  document.addEventListener('DOMContentLoaded', initializeAuthUI);
-  // Run on every subsequent client-side page navigation
-  document.addEventListener('astro:page-load', initializeAuthUI);
-</script>
 <style>
   header {
     position: sticky; top: 0; width: 100%;
@@ -27,7 +16,7 @@
   nav {
     height: 60px; display: flex; align-items: center; justify-content: space-between;
   }
-  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); }
+  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); text-decoration: none;}
   .nav-button {
     font-size: 0.9rem; font-weight: 600; padding: 0.6rem 1.2rem;
     border-radius: 999px; background-color: var(--button-color);

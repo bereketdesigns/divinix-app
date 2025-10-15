@@ -1,6 +1,7 @@
 ---
-// This server-side endpoint securely deletes the authentication cookie.
+// This server-side page securely deletes the authentication cookie.
 Astro.cookies.delete('auth_token', { path: '/' });
-// It then redirects the user back to the homepage.
-return Astro.redirect('/');
+
+// Then it redirects the user to the public discovery page.
+return Astro.redirect('/discover');
 ---
