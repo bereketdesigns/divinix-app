@@ -12,25 +12,10 @@
   </nav>
 </header>
 <script>
-  // This script runs on every page load to determine the user's login state
-  // and show the correct navigation button.
-  document.addEventListener('DOMContentLoaded', () => {
-    const createBtn = document.getElementById('create-profile-btn') as HTMLAnchorElement | null;
-    const editBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
-    
-    if (!createBtn || !editBtn) return;
-
-    // The presence of our 'auth_token' cookie is the source of truth for login state.
-    const isLoggedIn = document.cookie.includes('auth_token=');
-
-    if (isLoggedIn) {
-      createBtn.style.display = 'none';
-      editBtn.style.display = 'inline-block';
-    } else {
-      createBtn.style.display = 'inline-block';
-      editBtn.style.display = 'none';
-    }
-  });
+  import { updateNav } from '../lib/auth-client';
+  
+  // Run the navigation update logic as soon as the DOM is ready.
+  document.addEventListener('DOMContentLoaded', updateNav);
 </script>
 <style>
   header {
