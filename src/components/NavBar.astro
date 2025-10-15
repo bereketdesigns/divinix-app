@@ -1,12 +1,40 @@
 ---
-// A simple, static navbar for public-facing pages.
+// No server-side logic is needed in the component itself.
 ---
 <header>
   <nav class="container">
-    <a href="/discover" class="brand">Divinix</a>
-    <a href="/login" class="nav-button">Create Your Profile</a>
+    <a href="/" class="brand">Divinix</a>
+    
+    <!-- Both buttons are rendered, but one is hidden by default. The script will show the correct one. -->
+    <a href="/login" id="create-profile-btn" class="nav-button" style="display: none;">Create Your Profile</a>
+    <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
   </nav>
 </header>
+<script>
+  // This is the definitive, robust script to handle button visibility.
+  function updateNav() {
+    const createBtn = document.getElementById('create-profile-btn');
+    const editBtn = document.getElementById('edit-profile-btn');
+    if (!createBtn || !editBtn) return;
+
+    // A reliable way to check for the cookie on the client-side.
+    const isLoggedIn = document.cookie.split(';').some((item) => item.trim().startsWith('auth_token='));
+
+    if (isLoggedIn) {
+      createBtn.style.display = 'none';
+      editBtn.style.display = 'inline-block';
+    } else {
+      createBtn.style.display = 'inline-block';
+      editBtn.style.display = 'none';
+    }
+  }
+
+  // Run this check on the initial full page load.
+  document.addEventListener('DOMContentLoaded', updateNav);
+  
+  // Run this check again every time Astro navigates to a new page client-side.
+  document.addEventListener('astro:page-load', updateNav);
+</script>
 <style>
   header {
     position: sticky; top: 0; width: 100%;
@@ -16,15 +44,11 @@
   nav {
     height: 60px; display: flex; align-items: center; justify-content: space-between;
   }
-  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); text-decoration: none;}
+  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
   .nav-button {
     font-size: 0.9rem; font-weight: 600; padding: 0.6rem 1.2rem;
     border-radius: 999px; background-color: var(--button-color);
-    color: var(--button-text-color); transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none;
+    color: var(--button-text-color); transition: transform 0.2s; text-decoration: none;
   }
-  .nav-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent);
-  }
+  .nav-button:hover { transform: scale(1.05); }
 </style>
