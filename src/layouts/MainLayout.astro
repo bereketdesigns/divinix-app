@@ -7,7 +7,7 @@ interface Props {
 }
 const { title } = Astro.props;
 
-// The server reads the flag set by the middleware.
+// The server reads the flag set by the middleware, this part is correct.
 const isLoggedIn = Astro.locals.isLoggedIn;
 ---
 <!doctype html>
@@ -27,17 +27,16 @@ const isLoggedIn = Astro.locals.isLoggedIn;
       <slot /> 
     </main>
 
-    <!-- !!! NEW: Footer container for our buttons !!! -->
+    <!-- !!! THE CORRECTED HTML STRUCTURE !!! -->
     <footer id="footer-buttons" class="footer-buttons">
-      <!-- Create Profile Button (for logged-out users) -->
-      <a href="/login" id="create-profile-footer-btn" class="footer-button create">Create Profile</a>
+      <!-- This button is hidden by default with an inline style -->
+      <a href="/login" id="create-profile-footer-btn" class="footer-button create" style="display: none;">Create Profile</a>
 
-      <!-- Edit Profile Button (for logged-in users) -->
-      <a href="/edit" id="edit-profile-footer-btn" class="footer-button edit">Edit Profile</a>
+      <!-- This button is also hidden by default with an inline style -->
+      <a href="/edit" id="edit-profile-footer-btn" class="footer-button edit" style="display: none;">Edit Profile</a>
     </footer>
 
     <style is:global>
-      /* Styles for the new fixed footer buttons */
       .footer-buttons {
         position: fixed;
         bottom: 0;
@@ -45,12 +44,9 @@ const isLoggedIn = Astro.locals.isLoggedIn;
         width: 100%;
         padding: 1rem;
         display: flex;
-        justify-content: space-between; /* Pushes buttons to opposite sides */
-        align-items: center;
-        /* This makes sure the buttons don't block clicks on the content below them */
+        justify-content: space-between;
         pointer-events: none;
       }
-
       .footer-button {
         font-size: 1rem;
         font-weight: 600;
@@ -60,23 +56,26 @@ const isLoggedIn = Astro.locals.isLoggedIn;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         text-decoration: none;
         transition: transform 0.2s, opacity 0.2s;
-        pointer-events: auto; /* Re-enable clicks on the button itself */
-        display: none; /* Hide both buttons by default */
+        pointer-events: auto;
+        /* The animation is good, let's keep it */
+        opacity: 0;
+        animation: fadeIn 0.3s 0.1s ease-out forwards;
       }
       .footer-button:hover {
         transform: scale(1.05);
       }
-      
-      /* Specific styles for each button */
       .footer-button.create {
         background-color: var(--button-color);
         color: var(--button-text-color);
         margin-left: auto; /* Push to the right */
       }
       .footer-button.edit {
-        background-color: #34c759; /* A distinct green color for editing */
+        background-color: #34c759; /* Green for editing */
         color: white;
         margin-right: auto; /* Push to the left */
+      }
+      @keyframes fadeIn {
+        to { opacity: 1; }
       }
     </style>
 
@@ -85,11 +84,10 @@ const isLoggedIn = Astro.locals.isLoggedIn;
       document.addEventListener('DOMContentLoaded', () => {
         const createBtn = document.getElementById('create-profile-footer-btn');
         const editBtn = document.getElementById('edit-profile-footer-btn');
-        const footer = document.getElementById('footer-buttons');
-
+        
         // This check ensures the buttons ONLY appear on the homepage
         if (window.location.pathname === '/') {
-          if (!createBtn || !editBtn || !footer) return;
+          if (!createBtn || !editBtn) return;
 
           // Read the reliable "stamp" from the body tag.
           const isLoggedIn = document.body.dataset.isLoggedIn === 'true';
