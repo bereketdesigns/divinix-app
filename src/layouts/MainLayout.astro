@@ -6,6 +6,9 @@ interface Props {
 	title: string;
 }
 const { title } = Astro.props;
+
+// This line is now valid because of our change to env.d.ts
+const isLoggedIn = Astro.locals.isLoggedIn;
 ---
 <!doctype html>
 <html lang="en">
@@ -17,63 +20,31 @@ const { title } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 	</head>
-	<body>
+  <body data-is-logged-in={isLoggedIn}>
     <NavBar />
 		<main class="container">
       <slot /> 
     </main>
-
-    <!-- This container will hold the dynamically injected footer button -->
     <div id="footer-button-container"></div>
-
     <style is:global>
-      /* Styles for the new fixed footer button */
-      .fixed-footer-button {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        
-        font-size: 1rem;
-        font-weight: 600;
-        padding: 0.8rem 1.5rem;
-        border-radius: 999px;
-        border: none;
-        background-color: var(--button-color);
-        color: var(--button-text-color);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        text-decoration: none;
-        transition: transform 0.2s, opacity 0.2s;
-        
-        /* Animation */
-        opacity: 0;
-        animation: fadeIn 0.3s 0.1s ease-out forwards;
-      }
-      .fixed-footer-button:hover {
-        transform: translateX(-50%) scale(1.05);
-      }
-      @keyframes fadeIn {
-        to { opacity: 1; }
-      }
+      /* The styles for the fixed footer button are unchanged and correct */
+      .fixed-footer-button { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; font-size: 1rem; font-weight: 600; padding: 0.8rem 1.5rem; border-radius: 999px; border: none; background-color: var(--button-color); color: var(--button-text-color); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); text-decoration: none; transition: transform 0.2s, opacity 0.2s; opacity: 0; animation: fadeIn 0.3s 0.1s ease-out forwards; }
+      .fixed-footer-button:hover { transform: translateX(-50%) scale(1.05); }
+      @keyframes fadeIn { to { opacity: 1; } }
     </style>
 
     <script is:inline>
-      // This is the single, definitive script for handling auth UI.
+      // This is the definitive client-side script.
       document.addEventListener('DOMContentLoaded', () => {
         const createBtn = document.getElementById('create-profile-btn');
         const footerContainer = document.getElementById('footer-button-container');
 
-        // Check if the auth cookie exists.
-        const isLoggedIn = document.cookie.includes('auth_token=');
+        // It reads the "stamp" from the body tag, which is 100% reliable.
+        const isLoggedIn = document.body.dataset.isLoggedIn === 'true';
 
         if (isLoggedIn && createBtn && footerContainer) {
-          // If logged in:
-          // 1. Hide the "Create Profile" button in the navbar.
           createBtn.style.display = 'none';
-
-          // 2. Create and inject the "Edit Profile" button at the bottom.
-          if (!document.getElementById('edit-profile-footer-btn')) { // Prevent adding multiple buttons
+          if (!document.getElementById('edit-profile-footer-btn')) {
             const editButton = document.createElement('a');
             editButton.id = 'edit-profile-footer-btn';
             editButton.href = '/edit';
@@ -82,12 +53,11 @@ const { title } = Astro.props;
             footerContainer.appendChild(editButton);
           }
         } else if (createBtn) {
-          // If not logged in, ensure the "Create Profile" button is visible.
           createBtn.style.display = 'inline-block';
         }
       });
 
-      // This script handles Telegram-specific UI.
+      // The Telegram-specific script is unchanged.
       try {
         const tg = window.Telegram.WebApp;
         tg.ready();
@@ -100,9 +70,7 @@ const { title } = Astro.props;
         } else {
           tg.BackButton.hide();
         }
-      } catch (e) {
-        console.warn('Telegram script not found or failed to initialize.');
-      }
+      } catch (e) { console.warn('Telegram script not found.'); }
     </script>
 	</body>
 </html>

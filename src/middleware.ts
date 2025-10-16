@@ -4,27 +4,26 @@ import jsonwebtoken from 'jsonwebtoken';
 const JWT_SECRET = import.meta.env.JWT_SECRET;
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const protectedPaths = ['/edit'];
-  const { pathname } = context.url;
+  const token = context.cookies.get('auth_token')?.value;
+  let isAuthenticated = false;
 
-  if (protectedPaths.some(path => pathname.startsWith(path))) {
-    const token = context.cookies.get('auth_token')?.value;
-
-    if (!token || !JWT_SECRET) {
-      // If no token, redirect to login page.
-      return context.redirect('/login', 307);
-    }
-
+  if (token && JWT_SECRET) {
     try {
-      // Verify the token is valid.
       jsonwebtoken.verify(token, JWT_SECRET);
+      isAuthenticated = true;
     } catch (err) {
-      // If token is invalid (expired, tampered), delete it and redirect to login.
       context.cookies.delete('auth_token', { path: '/' });
-      return context.redirect('/login', 307);
+      isAuthenticated = false;
     }
   }
 
-  // If all checks pass or the route is not protected, continue to the page.
+  // This line is now valid because of our change to env.d.ts
+  context.locals.isLoggedIn = isAuthenticated;
+
+  const { pathname } = context.url;
+  if (pathname.startsWith('/edit') && !isAuthenticated) {
+    return context.redirect('/login');
+  }
+
   return next();
 });

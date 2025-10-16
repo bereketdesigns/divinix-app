@@ -1,12 +1,22 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    "strictNullChecks": true,
+    "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     },
-    // !!! THIS IS THE DEFINITIVE FIX !!!
-    // It enables compatibility between modern ES Modules and older CommonJS modules.
-    "esModuleInterop": true
-  }
+    // This explicitly includes our type definitions
+    "typeRoots": [
+      "node_modules/@types",
+      "src/types" // A common pattern, let's keep it clean
+    ]
+  },
+  // This tells VS Code and Astro to include all files in the src directory
+  "include": [
+    "src/**/*"
+  ]
 }

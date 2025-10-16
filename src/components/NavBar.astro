@@ -1,55 +1,17 @@
 ---
-// This component is now simple and static again.
-// The button will be controlled by a script in the main layout.
+// This component is simple and static.
 ---
 <header>
   <nav class="container">
     <a href="/" class="brand">Divinix</a>
-    
-    <!-- This button is visible by default. 
-         It will be hidden via script if the user is logged in. -->
     <a href="/login" id="create-profile-btn" class="nav-button">Create Your Profile</a>
   </nav>
 </header>
 <style>
-  /* Styles for the NavBar */
-  header {
-    position: sticky;
-    top: 0;
-    width: 100%;
-    background-color: var(--header-bg-color);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
-    border-bottom: 1px solid var(--border-color);
-  }
-  nav {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .brand {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--text-color);
-    text-decoration: none;
-  }
-  .nav-button {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.6rem 1.2rem;
-    border-radius: 999px; /* Pill shape */
-    background-color: var(--button-color);
-    color: var(--button-text-color);
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none;
-  }
-  .nav-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent);
-  }
+  /* Styles are correct and unchanged */
+  header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
+  nav { max-width: 1200px; margin: 0 auto; padding: 0 1rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
+  .nav-button { font-size: 0.9rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 999px; background-color: var(--button-color); color: var(--button-text-color); transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; }
+  .nav-button:hover { transform: scale(1.05); box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent); }
 </style>
