@@ -1,13 +1,12 @@
 ---
-import { isLoggedIn } from '../stores/authStore';
+// This frontmatter is intentionally empty.
 ---
 <header>
   <nav class="container">
     <a href="/" class="brand">Divinix</a>
-    
-    <!-- The buttons are rendered, and the script below controls visibility -->
-    <a href="/login" id="create-profile-btn" class="nav-button">Create Your Profile</a>
-    <a href="/edit" id="edit-profile-btn" class="nav-button">Edit Profile</a>
+    <!-- Both buttons are rendered, but hidden by default to prevent flashing -->
+    <a href="/login" id="create-profile-btn" class="nav-button" style="display: none;">Create Your Profile</a>
+    <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
   </nav>
 </header>
 <script>
@@ -16,54 +15,23 @@ import { isLoggedIn } from '../stores/authStore';
   const createBtn = document.getElementById('create-profile-btn') as HTMLAnchorElement | null;
   const editBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
 
-  // This function updates the UI based on the store's value.
-  // !!! THIS IS THE FIX: We explicitly type 'isAuthenticated' as a boolean !!!
   function updateNavButtons(isAuthenticated: boolean) {
     if (createBtn && editBtn) {
       createBtn.style.display = isAuthenticated ? 'none' : 'inline-block';
       editBtn.style.display = isAuthenticated ? 'inline-block' : 'none';
     }
   }
-
-  // The subscribe function now passes a strongly typed value to our handler.
+  
+  // This is the key. The middleware sets the store's value on the server.
+  // Astro automatically passes this initial server state to the client.
+  // This subscription immediately fires with the correct, server-set value.
   isLoggedIn.subscribe(updateNavButtons);
 </script>
 <style>
-  /* The styles are unchanged and correct. */
-  header {
-    position: sticky; top: 0; width: 100%;
-    background-color: var(--header-bg-color); backdrop-filter: blur(12px);
-    z-index: 100; border-bottom: 1px solid var(--border-color);
-  }
-  nav {
-    /* container class is now on the nav element */
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .brand {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--text-color);
-    text-decoration: none;
-  }
-  .nav-button {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.6rem 1.2rem;
-    border-radius: 999px; /* Pill shape */
-    background-color: var(--button-color);
-    color: var(--button-text-color);
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .nav-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent);
-  }
+  /* Styles are unchanged and correct */
+  header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
+  nav { max-width: 1200px; margin: 0 auto; padding: 0 1rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
+  .nav-button { font-size: 0.9rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 999px; background-color: var(--button-color); color: var(--button-text-color); transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; display: inline-block; }
+  .nav-button:hover { transform: scale(1.05); box-shadow: 0 4px 15px color-mix(in srgb, var(--button-color) 30%, transparent); }
 </style>

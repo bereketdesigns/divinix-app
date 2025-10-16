@@ -1,6 +1,7 @@
 ---
 import NavBar from '../components/NavBar.astro';
 import '../styles/global.css';
+// NO Nano Stores imports are needed here.
 
 interface Props {
 	title: string;
@@ -23,23 +24,16 @@ const { title } = Astro.props;
       <slot /> 
     </main>
     <script is:inline>
-      // This script handles theme sync with Telegram and the back button.
+      // This script ONLY handles Telegram theme and back button.
       try {
         const tg = window.Telegram.WebApp;
         tg.ready();
-        
-        const applyTheme = () => {
-          document.documentElement.className = tg.colorScheme;
-        };
+        const applyTheme = () => { document.documentElement.className = tg.colorScheme; };
         tg.onEvent('themeChanged', applyTheme);
         applyTheme();
-
-        // Show back button on all pages except the homepage
         if (window.location.pathname !== '/') {
           tg.BackButton.show();
-          tg.BackButton.onClick(() => {
-            window.history.back();
-          });
+          tg.BackButton.onClick(() => { window.history.back(); });
         } else {
           tg.BackButton.hide();
         }
