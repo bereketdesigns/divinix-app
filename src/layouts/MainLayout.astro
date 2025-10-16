@@ -7,7 +7,7 @@ interface Props {
 }
 const { title } = Astro.props;
 
-// The server reads the flag set by the middleware, this part is correct.
+// The server gets the definitive login state from the middleware.
 const isLoggedIn = Astro.locals.isLoggedIn;
 ---
 <!doctype html>
@@ -20,100 +20,11 @@ const isLoggedIn = Astro.locals.isLoggedIn;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 	</head>
-  <!-- The server "stamps" the login state onto the body tag -->
-	<body data-is-logged-in={isLoggedIn}>
-    <NavBar />
+	<body>
+    <!-- The login state is passed as a prop to the NavBar -->
+    <NavBar isLoggedIn={isLoggedIn} />
 		<main class="container">
       <slot /> 
     </main>
-
-    <!-- !!! THE CORRECTED HTML STRUCTURE !!! -->
-    <footer id="footer-buttons" class="footer-buttons">
-      <!-- This button is hidden by default with an inline style -->
-      <a href="/login" id="create-profile-footer-btn" class="footer-button create" style="display: none;">Create Profile</a>
-
-      <!-- This button is also hidden by default with an inline style -->
-      <a href="/edit" id="edit-profile-footer-btn" class="footer-button edit" style="display: none;">Edit Profile</a>
-    </footer>
-
-    <style is:global>
-      .footer-buttons {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        padding: 1rem;
-        display: flex;
-        justify-content: space-between;
-        pointer-events: none;
-      }
-      .footer-button {
-        font-size: 1rem;
-        font-weight: 600;
-        padding: 0.8rem 1.5rem;
-        border-radius: 999px;
-        border: none;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        text-decoration: none;
-        transition: transform 0.2s, opacity 0.2s;
-        pointer-events: auto;
-        /* The animation is good, let's keep it */
-        opacity: 0;
-        animation: fadeIn 0.3s 0.1s ease-out forwards;
-      }
-      .footer-button:hover {
-        transform: scale(1.05);
-      }
-      .footer-button.create {
-        background-color: var(--button-color);
-        color: var(--button-text-color);
-        margin-left: auto; /* Push to the right */
-      }
-      .footer-button.edit {
-        background-color: #34c759; /* Green for editing */
-        color: white;
-        margin-right: auto; /* Push to the left */
-      }
-      @keyframes fadeIn {
-        to { opacity: 1; }
-      }
-    </style>
-
-    <script is:inline>
-      // This is the definitive client-side script.
-      document.addEventListener('DOMContentLoaded', () => {
-        const createBtn = document.getElementById('create-profile-footer-btn');
-        const editBtn = document.getElementById('edit-profile-footer-btn');
-        
-        // This check ensures the buttons ONLY appear on the homepage
-        if (window.location.pathname === '/') {
-          if (!createBtn || !editBtn) return;
-
-          // Read the reliable "stamp" from the body tag.
-          const isLoggedIn = document.body.dataset.isLoggedIn === 'true';
-
-          if (isLoggedIn) {
-            editBtn.style.display = 'inline-block';
-          } else {
-            createBtn.style.display = 'inline-block';
-          }
-        }
-      });
-
-      // The Telegram-specific script is unchanged.
-      try {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        const applyTheme = () => { document.documentElement.className = tg.colorScheme; };
-        tg.onEvent('themeChanged', applyTheme);
-        applyTheme();
-        if (window.location.pathname !== '/') {
-          tg.BackButton.show();
-          tg.BackButton.onClick(() => { window.history.back(); });
-        } else {
-          tg.BackButton.hide();
-        }
-      } catch (e) { console.warn('Telegram script not found.'); }
-    </script>
 	</body>
 </html>

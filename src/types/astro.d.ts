@@ -1,7 +1,17 @@
-// This file provides type definitions for Astro's environment
-
-// This ensures we still get Astro's core client types
 /// <reference types="astro/client" />
+
+// Interface for our public profile data
+interface Profile {
+  id: number;
+  updated_at: string;
+  created_at: string;
+  username: string | null;
+  full_name: string | null;
+  bio: string | null;
+  specialty: string | null;
+  avatar_url: string | null;
+  portfolio_url: string | null;
+}
 
 declare namespace App {
   /**
@@ -10,15 +20,14 @@ declare namespace App {
    */
   interface Locals {
     isLoggedIn: boolean;
+    profile: Profile | null;
   }
 }
 
-// !!! THIS IS THE FIX !!!
-// This tells TypeScript that a 'Telegram' object may exist on the global 'window' object.
-// It defines the exact shape of the object we are using in our code.
+// Global definition for the Telegram Web App object
 declare global {
     interface Window {
-        Telegram?: { // The '?' makes the property optional
+        Telegram?: {
             WebApp: {
                 initData: string;
                 initDataUnsafe: {
@@ -27,16 +36,7 @@ declare global {
                         [key: string]: any;
                     };
                 };
-                // Add any other properties from the Telegram script you might use
-                colorScheme: 'light' | 'dark';
-                onEvent: (eventType: string, eventHandler: (...args: any[]) => void) => void;
-                BackButton: {
-                    show: () => void;
-                    hide: () => void;
-                    onClick: (callback: () => void) => void;
-                };
-                ready: () => void;
-                [key: string]: any; // Allow for other properties
+                [key: string]: any;
             }
         }
     }

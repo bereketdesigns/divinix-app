@@ -15,26 +15,36 @@ import MainLayout from '../layouts/MainLayout.astro';
 <script>
   const loginBtn = document.getElementById('login-btn') as HTMLButtonElement | null;
   const statusMessage = document.getElementById('status-message') as HTMLDivElement | null;
+  
   loginBtn?.addEventListener('click', async () => {
     if (!statusMessage || !loginBtn) return;
     try {
-      const tg = window.Telegram.WebApp;
-      if (!tg.initData) {
+      const tg = window.Telegram?.WebApp;
+      if (!tg || !tg.initData) {
         throw new Error("This app must be run inside Telegram to log in.");
       }
       statusMessage.textContent = "Authenticating...";
       loginBtn.disabled = true;
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: tg.initData }),
       });
+
+      const data = await response.json();
+
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Login failed on the server.');
+        throw new Error(data.error || 'Login failed on the server.');
       }
-      statusMessage.textContent = "Success! Redirecting...";
-      window.location.href = '/edit';
+      
+      if (data.redirectUrl) {
+        statusMessage.textContent = "Success! Redirecting...";
+        window.location.href = data.redirectUrl;
+      } else {
+        throw new Error("Login response did not include a redirect URL.");
+      }
+
     } catch (err) {
       const error = err as Error;
       console.error('Login process failed:', error);

@@ -6,7 +6,7 @@ import { createHmac } from 'node:crypto';
 const botToken = import.meta.env.BOT_TOKEN;
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_KEY;
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const JWT_SECRET = import.meta.env.JWT_SECRET; // Ensure this is in your .env and Vercel
+const JWT_SECRET = import.meta.env.JWT_SECRET;
 
 function validateTelegramAuth(initData: string, botToken: string): URLSearchParams {
   const urlParams = new URLSearchParams(initData);
@@ -23,7 +23,7 @@ function validateTelegramAuth(initData: string, botToken: string): URLSearchPara
   const authDate = urlParams.get('auth_date');
   if (!authDate) { throw new Error('auth_date is missing.'); }
   if (Date.now() / 1000 - parseInt(authDate, 10) > 3600) { throw new Error('Data is expired.'); }
-  return urlParams; // This was the missing return path
+  return urlParams;
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -59,7 +59,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       sameSite: 'lax',
     });
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    // THE CRITICAL CHANGE: Return a JSON object with a redirect URL
+    return new Response(JSON.stringify({ redirectUrl: '/edit' }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (err) {
     const error = err as Error;
     console.error('[Login API Error]:', error.message);
