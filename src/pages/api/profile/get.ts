@@ -26,19 +26,16 @@ export const GET: APIRoute = async ({ cookies }) => {
 
     if (error) throw error;
 
-    // Create a response with headers that prevent caching.
-    const response = new Response(JSON.stringify(profile), {
+    // Return the data with explicit no-cache headers
+    return new Response(JSON.stringify(profile), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'no-store, must-revalidate'
       }
     });
-
-    return response;
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Invalid token or server error' }), { status: 401 });
+    // If the token is invalid, we return an unauthorized error
+    return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401 });
   }
 };
