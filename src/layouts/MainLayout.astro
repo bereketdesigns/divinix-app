@@ -7,7 +7,7 @@ interface Props {
 }
 const { title } = Astro.props;
 
-// This line is now valid because of our change to env.d.ts
+// The server reads the flag set by the middleware.
 const isLoggedIn = Astro.locals.isLoggedIn;
 ---
 <!doctype html>
@@ -20,40 +20,85 @@ const isLoggedIn = Astro.locals.isLoggedIn;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 	</head>
-  <body data-is-logged-in={isLoggedIn}>
+  <!-- The server "stamps" the login state onto the body tag -->
+	<body data-is-logged-in={isLoggedIn}>
     <NavBar />
 		<main class="container">
       <slot /> 
     </main>
-    <div id="footer-button-container"></div>
+
+    <!-- !!! NEW: Footer container for our buttons !!! -->
+    <footer id="footer-buttons" class="footer-buttons">
+      <!-- Create Profile Button (for logged-out users) -->
+      <a href="/login" id="create-profile-footer-btn" class="footer-button create">Create Profile</a>
+
+      <!-- Edit Profile Button (for logged-in users) -->
+      <a href="/edit" id="edit-profile-footer-btn" class="footer-button edit">Edit Profile</a>
+    </footer>
+
     <style is:global>
-      /* The styles for the fixed footer button are unchanged and correct */
-      .fixed-footer-button { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; font-size: 1rem; font-weight: 600; padding: 0.8rem 1.5rem; border-radius: 999px; border: none; background-color: var(--button-color); color: var(--button-text-color); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25); text-decoration: none; transition: transform 0.2s, opacity 0.2s; opacity: 0; animation: fadeIn 0.3s 0.1s ease-out forwards; }
-      .fixed-footer-button:hover { transform: translateX(-50%) scale(1.05); }
-      @keyframes fadeIn { to { opacity: 1; } }
+      /* Styles for the new fixed footer buttons */
+      .footer-buttons {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between; /* Pushes buttons to opposite sides */
+        align-items: center;
+        /* This makes sure the buttons don't block clicks on the content below them */
+        pointer-events: none;
+      }
+
+      .footer-button {
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 0.8rem 1.5rem;
+        border-radius: 999px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        text-decoration: none;
+        transition: transform 0.2s, opacity 0.2s;
+        pointer-events: auto; /* Re-enable clicks on the button itself */
+        display: none; /* Hide both buttons by default */
+      }
+      .footer-button:hover {
+        transform: scale(1.05);
+      }
+      
+      /* Specific styles for each button */
+      .footer-button.create {
+        background-color: var(--button-color);
+        color: var(--button-text-color);
+        margin-left: auto; /* Push to the right */
+      }
+      .footer-button.edit {
+        background-color: #34c759; /* A distinct green color for editing */
+        color: white;
+        margin-right: auto; /* Push to the left */
+      }
     </style>
 
     <script is:inline>
       // This is the definitive client-side script.
       document.addEventListener('DOMContentLoaded', () => {
-        const createBtn = document.getElementById('create-profile-btn');
-        const footerContainer = document.getElementById('footer-button-container');
+        const createBtn = document.getElementById('create-profile-footer-btn');
+        const editBtn = document.getElementById('edit-profile-footer-btn');
+        const footer = document.getElementById('footer-buttons');
 
-        // It reads the "stamp" from the body tag, which is 100% reliable.
-        const isLoggedIn = document.body.dataset.isLoggedIn === 'true';
+        // This check ensures the buttons ONLY appear on the homepage
+        if (window.location.pathname === '/') {
+          if (!createBtn || !editBtn || !footer) return;
 
-        if (isLoggedIn && createBtn && footerContainer) {
-          createBtn.style.display = 'none';
-          if (!document.getElementById('edit-profile-footer-btn')) {
-            const editButton = document.createElement('a');
-            editButton.id = 'edit-profile-footer-btn';
-            editButton.href = '/edit';
-            editButton.className = 'fixed-footer-button';
-            editButton.textContent = 'Edit Profile';
-            footerContainer.appendChild(editButton);
+          // Read the reliable "stamp" from the body tag.
+          const isLoggedIn = document.body.dataset.isLoggedIn === 'true';
+
+          if (isLoggedIn) {
+            editBtn.style.display = 'inline-block';
+          } else {
+            createBtn.style.display = 'inline-block';
           }
-        } else if (createBtn) {
-          createBtn.style.display = 'inline-block';
         }
       });
 
