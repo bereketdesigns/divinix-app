@@ -10,16 +10,15 @@ declare namespace App {
    */
   interface Locals {
     isLoggedIn: boolean;
-    user?: {
-      userId: number;
-    };
   }
 }
 
-// This section defines the Telegram Web App object on the global Window
+// !!! THIS IS THE FIX !!!
+// This tells TypeScript that a 'Telegram' object may exist on the global 'window' object.
+// It defines the exact shape of the object we are using in our code.
 declare global {
     interface Window {
-        Telegram?: {
+        Telegram?: { // The '?' makes the property optional
             WebApp: {
                 initData: string;
                 initDataUnsafe: {
@@ -28,7 +27,16 @@ declare global {
                         [key: string]: any;
                     };
                 };
-                [key: string]: any;
+                // Add any other properties from the Telegram script you might use
+                colorScheme: 'light' | 'dark';
+                onEvent: (eventType: string, eventHandler: (...args: any[]) => void) => void;
+                BackButton: {
+                    show: () => void;
+                    hide: () => void;
+                    onClick: (callback: () => void) => void;
+                };
+                ready: () => void;
+                [key: string]: any; // Allow for other properties
             }
         }
     }
