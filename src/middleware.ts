@@ -1,32 +1,30 @@
 import { defineMiddleware } from 'astro:middleware';
 import jsonwebtoken from 'jsonwebtoken';
-import { isLoggedIn } from './stores/authStore'; // Import our new store
 
 const JWT_SECRET = import.meta.env.JWT_SECRET;
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const token = context.cookies.get('auth_token')?.value;
-  let isAuthenticated = false;
+  const protectedPaths = ['/edit'];
+  const { pathname } = context.url;
 
-  if (token && JWT_SECRET) {
+  if (protectedPaths.some(path => pathname.startsWith(path))) {
+    const token = context.cookies.get('auth_token')?.value;
+
+    if (!token || !JWT_SECRET) {
+      // If no token, redirect to login page.
+      return context.redirect('/login', 307);
+    }
+
     try {
-      // Verify the token is valid and not expired
+      // Verify the token is valid.
       jsonwebtoken.verify(token, JWT_SECRET);
-      isAuthenticated = true;
     } catch (err) {
-      // Token is invalid or expired, user is not authenticated
-      isAuthenticated = false;
+      // If token is invalid (expired, tampered), delete it and redirect to login.
+      context.cookies.delete('auth_token', { path: '/' });
+      return context.redirect('/login', 307);
     }
   }
 
-  // Set the initial value of the Nano Store on the server.
-  // This value will be passed to the client automatically.
-  isLoggedIn.set(isAuthenticated);
-
-  // Protect the /edit route. If the user is not authenticated, redirect them.
-  if (context.url.pathname.startsWith('/edit') && !isAuthenticated) {
-    return context.redirect('/login');
-  }
-
+  // If all checks pass or the route is not protected, continue to the page.
   return next();
 });
