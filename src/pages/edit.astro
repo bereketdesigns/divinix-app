@@ -2,20 +2,19 @@
 import MainLayout from '../layouts/MainLayout.astro';
 ---
 <MainLayout title="Edit Your Profile">
-  <header class="page-header">
-    <nav class="container">
-      <a href="/discover" class="brand">Divinix</a>
-      <a href="/logout" class="nav-button-secondary">Log Out</a>
-    </nav>
-  </header>
-  <div class="edit-container container">
+  <div class="edit-container">
     <div id="loading-state"><p>Loading your profile...</p></div>
+
     <div id="profile-form-container" style="display: none;">
+      <header class="form-header"><h1>Edit Your Profile</h1></header>
+
       <section id="form-section" class="form-section">
-        <h1 class="form-title">Your Profile</h1>
         <form id="profile-form">
           <label>Profile Picture<input type="file" id="avatar-upload" accept="image/*" /></label>
-          <div class="image-preview-wrapper"><img src="" alt="Current profile picture" class="image-preview" id="image-preview" /></div>
+          <div class="image-preview-wrapper">
+            <span>Current:</span>
+            <img src="" alt="Current profile picture" class="image-preview" id="image-preview" />
+          </div>
           <input type="hidden" id="avatar-url-input" />
           <label>Full Name<input type="text" name="full_name" required /></label>
           <label>Bio<textarea name="bio" rows="3" placeholder="e.g., Crafting beautiful digital experiences..."></textarea></label>
@@ -23,103 +22,148 @@ import MainLayout from '../layouts/MainLayout.astro';
           <label>Portfolio URL<input type="url" name="portfolio_url" placeholder="https://your-portfolio.com" /></label>
           <label>Contact Username (from Telegram)<input type="text" name="username" readonly /></label>
           <div class="form-actions">
+            <button type="button" id="logout-btn" class="btn btn-secondary">Log Out</button>
             <div id="form-status" class="status-message"></div>
-            <a href="/discover" class="btn btn-secondary">Cancel</a>
+            <a href="/" class="btn btn-secondary" style="margin-left: auto;">Cancel</a>
             <button type="submit" id="save-btn" class="btn btn-primary">Save Changes</button>
           </div>
         </form>
       </section>
+
       <section id="success-section" class="form-section" style="display: none; text-align: center;">
         <h2>Profile Saved!</h2>
-        <p>Your profile is now live on the discovery page.</p>
-        <a href="/discover" class="btn btn-primary" style="margin-top: 1rem;">View Live Profile</a>
+        <p>Your profile is now live on the homepage.</p>
+        <a href="/" class="btn btn-primary" style="margin-top: 1rem;">View Your Live Profile</a>
       </section>
     </div>
   </div>
 </MainLayout>
 <script>
-  const loadingState = document.getElementById('loading-state') as HTMLDivElement;
-  const formContainer = document.getElementById('profile-form-container') as HTMLDivElement;
-  const formSection = document.getElementById('form-section') as HTMLElement;
-  const successSection = document.getElementById('success-section') as HTMLElement;
-  const form = document.getElementById('profile-form') as HTMLFormElement;
-  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
-  const formStatus = document.getElementById('form-status') as HTMLDivElement;
-  const avatarUpload = document.getElementById('avatar-upload') as HTMLInputElement;
-  const avatarUrlInput = document.getElementById('avatar-url-input') as HTMLInputElement;
-  const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+  // --- Type-Safe Element Selectors ---
+  const loadingState = document.getElementById('loading-state') as HTMLDivElement | null;
+  const formContainer = document.getElementById('profile-form-container') as HTMLDivElement | null;
+  const formSection = document.getElementById('form-section') as HTMLElement | null;
+  const successSection = document.getElementById('success-section') as HTMLElement | null;
+  const form = document.getElementById('profile-form') as HTMLFormElement | null;
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement | null;
+  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement | null;
+  const formStatus = document.getElementById('form-status') as HTMLDivElement | null;
+  const avatarUpload = document.getElementById('avatar-upload') as HTMLInputElement | null;
+  const avatarUrlInput = document.getElementById('avatar-url-input') as HTMLInputElement | null;
+  const imagePreview = document.getElementById('image-preview') as HTMLImageElement | null;
 
+  // --- Fully Implemented Functions ---
   async function uploadFile(file: File): Promise<string> {
-    const response = await fetch('/api/profile/upload', { method: 'POST', body: file, headers: { 'Content-Type': file.type } });
+    const response = await fetch('/api/profile/upload', {
+      method: 'POST', body: file, headers: { 'Content-Type': file.type }
+    });
     if (!response.ok) { throw new Error('Image upload failed.'); }
-    return (await response.json()).url;
+    const data = await response.json();
+    return data.url;
   }
 
   async function loadProfile() {
+    if (!form || !loadingState || !formContainer || !avatarUrlInput || !imagePreview) return;
     try {
       const response = await fetch('/api/profile/get');
-      if (response.status === 401 || !response.ok) { window.location.href = '/login'; return; }
+      if (response.status === 401 || !response.ok) {
+        window.location.href = '/login'; return;
+      }
       const profile = await response.json();
+
       (form.elements.namedItem('full_name') as HTMLInputElement).value = profile.full_name || '';
       (form.elements.namedItem('bio') as HTMLTextAreaElement).value = profile.bio || '';
       (form.elements.namedItem('specialty') as HTMLInputElement).value = profile.specialty || '';
       (form.elements.namedItem('portfolio_url') as HTMLInputElement).value = profile.portfolio_url || '';
       (form.elements.namedItem('username') as HTMLInputElement).value = profile.username || 'Not available';
+      
       const currentAvatarUrl = profile.avatar_url || `https://i.pravatar.cc/150?u=${profile.id}`;
       avatarUrlInput.value = currentAvatarUrl;
       imagePreview.src = currentAvatarUrl;
+
       loadingState.style.display = 'none';
       formContainer.style.display = 'block';
-    } catch (error) { loadingState.textContent = 'Error loading profile.'; }
+    } catch (error) {
+      if (loadingState) loadingState.textContent = 'Error loading profile. Please try logging in again.';
+    }
   }
 
+  // --- Event Listeners ---
   document.addEventListener('DOMContentLoaded', loadProfile);
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!saveBtn || !formStatus || !avatarUpload || !avatarUrlInput || !formSection || !successSection) return;
+
     saveBtn.disabled = true;
     formStatus.textContent = 'Saving...';
     const newAvatarFile = avatarUpload.files?.[0];
+
     try {
       let finalAvatarUrl = avatarUrlInput.value;
       if (newAvatarFile) {
-        formStatus.textContent = 'Uploading...';
+        formStatus.textContent = 'Uploading new picture...';
         finalAvatarUrl = await uploadFile(newAvatarFile);
       }
+      formStatus.textContent = 'Saving profile data...';
       const formData = new FormData(form);
       const updates = {
-        full_name: formData.get('full_name'), bio: formData.get('bio'),
-        specialty: formData.get('specialty'), portfolio_url: formData.get('portfolio_url'),
+        full_name: formData.get('full_name'),
+        bio: formData.get('bio'),
+        specialty: formData.get('specialty'),
+        portfolio_url: formData.get('portfolio_url'),
         avatar_url: finalAvatarUrl,
       };
-      const response = await fetch('/api/profile/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
       if (!response.ok) throw new Error('Failed to save profile.');
+      
       formSection.style.display = 'none';
       successSection.style.display = 'block';
     } catch (error) {
       const err = error as Error;
       formStatus.textContent = `Error: ${err.message}`;
-    } finally {
-      saveBtn.disabled = false;
+      saveBtn.disabled = false; // Re-enable button on error
+    } 
+    // Do not re-enable button on success, as the form is now hidden.
+  });
+
+  logoutBtn?.addEventListener('click', async () => {
+    if (!logoutBtn) return;
+    logoutBtn.disabled = true;
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    } catch (error) {
+      alert('Logout failed. Please try again.');
+      logoutBtn.disabled = false;
     }
   });
 </script>
 <style>
-  .page-header { position: sticky; top: 0; width: 100%; background-color: var(--header-bg-color); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1px solid var(--border-color); }
-  .page-header nav { height: 60px; display: flex; align-items: center; justify-content: space-between; }
-  .brand { font-size: 1.75rem; font-weight: 800; color: var(--text-color); text-decoration: none; }
-  .nav-button-secondary { font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; background-color: var(--border-color); color: var(--text-color); text-decoration: none; }
-  .edit-container { max-width: 800px; margin: 0 auto; padding-top: 2rem; }
-  .form-title { padding-bottom: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); }
+  .edit-container { max-width: 800px; margin: 2rem auto; }
+  .form-header { border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 2rem; }
+  .form-header h1 { margin: 0; }
   .form-section { background-color: var(--secondary-bg-color); padding: 2rem; border-radius: 24px; }
   #profile-form { display: flex; flex-direction: column; gap: 1.5rem; }
   #profile-form label { font-weight: 500; display: flex; flex-direction: column; gap: 0.5rem; }
-  #profile-form input, #profile-form textarea { width: 100%; padding: 0.75rem; font-size: 1rem; border-radius: 12px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); }
+  #profile-form input, #profile-form textarea {
+    width: 100%; padding: 0.75rem; font-size: 1rem; border-radius: 12px;
+    border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color);
+  }
   input[name="username"] { background-color: var(--bg-color); cursor: not-allowed; opacity: 0.7; }
   .image-preview-wrapper { display: flex; align-items: center; gap: 1rem; }
   .image-preview { height: 60px; width: 60px; border-radius: 50%; object-fit: cover; background-color: var(--border-color); }
   .form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 1rem; }
-  .btn, .btn-primary, .btn-secondary { padding: 0.75rem 1.5rem; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .btn, .btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none;
+  }
   .btn-primary { background-color: var(--button-color); color: var(--button-text-color); }
   .btn-secondary { background-color: var(--border-color); color: var(--text-color); }
   .status-message { min-height: 1.2em; text-align: left; flex-grow: 1; color: var(--hint-color); }
