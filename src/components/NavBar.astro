@@ -1,52 +1,39 @@
 ---
-// There is NO server-side logic here anymore.
-// The component is purely presentational, and the client script handles all state.
+import { isLoggedIn } from '../stores/authStore';
 ---
 <header>
   <nav class="container">
     <a href="/" class="brand">Divinix</a>
     
-    <!-- Both buttons are rendered in the HTML but hidden by default. -->
-    <!-- The script below will reveal the correct one. -->
-    <a href="/login" id="create-profile-btn" class="nav-button" style="display: none;">Create Your Profile</a>
-    <a href="/edit" id="edit-profile-btn" class="nav-button" style="display: none;">Edit Profile</a>
+    <!-- The buttons are rendered, and the script below controls visibility -->
+    <a href="/login" id="create-profile-btn" class="nav-button">Create Your Profile</a>
+    <a href="/edit" id="edit-profile-btn" class="nav-button">Edit Profile</a>
   </nav>
 </header>
 <script>
-  // This script runs on every page as soon as the document is ready.
-  // It is the single source of truth for the navigation button's state.
-  document.addEventListener('DOMContentLoaded', () => {
-    const createBtn = document.getElementById('create-profile-btn') as HTMLAnchorElement | null;
-    const editBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
-    
-    // This check is essential to prevent errors if the elements aren't found.
-    if (!createBtn || !editBtn) {
-      console.error("Navigation buttons not found in the DOM.");
-      return;
-    }
+  import { isLoggedIn } from '../stores/authStore';
 
-    // Check for the presence of our authentication cookie in the browser.
-    const isLoggedIn = document.cookie.includes('auth_token=');
+  const createBtn = document.getElementById('create-profile-btn') as HTMLAnchorElement | null;
+  const editBtn = document.getElementById('edit-profile-btn') as HTMLAnchorElement | null;
 
-    // Based on the login state, reveal ONLY the correct button.
-    if (isLoggedIn) {
-      editBtn.style.display = 'inline-block';
-    } else {
-      createBtn.style.display = 'inline-block';
+  // This function updates the UI based on the store's value.
+  // !!! THIS IS THE FIX: We explicitly type 'isAuthenticated' as a boolean !!!
+  function updateNavButtons(isAuthenticated: boolean) {
+    if (createBtn && editBtn) {
+      createBtn.style.display = isAuthenticated ? 'none' : 'inline-block';
+      editBtn.style.display = isAuthenticated ? 'inline-block' : 'none';
     }
-  });
+  }
+
+  // The subscribe function now passes a strongly typed value to our handler.
+  isLoggedIn.subscribe(updateNavButtons);
 </script>
 <style>
   /* The styles are unchanged and correct. */
   header {
-    position: sticky;
-    top: 0;
-    width: 100%;
-    background-color: var(--header-bg-color);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
-    border-bottom: 1px solid var(--border-color);
+    position: sticky; top: 0; width: 100%;
+    background-color: var(--header-bg-color); backdrop-filter: blur(12px);
+    z-index: 100; border-bottom: 1px solid var(--border-color);
   }
   nav {
     /* container class is now on the nav element */
@@ -73,7 +60,7 @@
     color: var(--button-text-color);
     transition: transform 0.2s, box-shadow 0.2s;
     text-decoration: none;
-    display: inline-block; /* Ensure the anchor tag behaves like a button */
+    display: inline-block;
   }
   .nav-button:hover {
     transform: scale(1.05);

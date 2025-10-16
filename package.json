@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@astrojs/vercel": "^8.2.9",
+    "@nanostores/preact": "^1.0.0",
     "@supabase/supabase-js": "^2.75.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/uuid": "^11.0.0",
     "astro": "^5.14.3",
     "jsonwebtoken": "^9.0.2",
+    "nanostores": "^1.0.1",
     "uuid": "^13.0.0"
   }
 }
